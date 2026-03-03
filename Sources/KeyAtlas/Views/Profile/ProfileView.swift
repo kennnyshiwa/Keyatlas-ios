@@ -86,8 +86,10 @@ struct ProfileTabView: View {
                                 ProjectDetailView(slug: project.slug)
                             } label: {
                                 ProjectCardView(project: project)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal)
                         }
                     }
@@ -205,8 +207,10 @@ struct PublicProfileView: View {
                                         ProjectDetailView(slug: project.slug)
                                     } label: {
                                         ProjectCardView(project: project)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                     .buttonStyle(.plain)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal)
                                 }
                             }
