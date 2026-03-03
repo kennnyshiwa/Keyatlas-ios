@@ -90,7 +90,7 @@ struct ProfileTabView: View {
                             }
                             .buttonStyle(.plain)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
+                            .padding(.horizontal, 12)
                         }
                     }
                 }
@@ -203,15 +203,16 @@ struct PublicProfileView: View {
                                     .font(.headline)
                                     .padding(.horizontal)
                                 ForEach(projects) { project in
+                                    let safeSlug = normalizedProjectSlug(project.slug)
                                     NavigationLink {
-                                        ProjectDetailView(slug: project.slug)
+                                        ProjectDetailView(slug: safeSlug)
                                     } label: {
                                         ProjectCardView(project: project)
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                     .buttonStyle(.plain)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal)
+                                    .padding(.horizontal, 12)
                                 }
                             }
                         }
@@ -222,5 +223,19 @@ struct PublicProfileView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadProfile(username: username) }
+    }
+
+    private func normalizedProjectSlug(_ raw: String) -> String {
+        // Defensive: some payloads may send full URLs instead of slugs
+        if let url = URL(string: raw), let host = url.host, !host.isEmpty {
+            let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            if path.hasPrefix("projects/") {
+                return String(path.dropFirst("projects/".count))
+            }
+            if let last = path.split(separator: "/").last, !last.isEmpty {
+                return String(last)
+            }
+        }
+        return raw.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 }
