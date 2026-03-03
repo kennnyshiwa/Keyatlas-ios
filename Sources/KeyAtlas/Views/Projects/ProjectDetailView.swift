@@ -28,12 +28,17 @@ struct ProjectDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 // Hero image
-                CachedImage(url: project.heroImageUrl)
-                    .frame(height: 250)
-                    .clipped()
-                    .overlay(alignment: .bottomLeading) {
-                        heroOverlay(project)
-                    }
+                ZStack(alignment: .bottomLeading) {
+                    CachedImage(url: project.heroImageUrl, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 250)
+                        .background(.black.opacity(0.03))
+                        .clipped()
+
+                    heroOverlay(project)
+                }
+                .frame(maxWidth: .infinity)
+                .clipped()
 
                 VStack(alignment: .leading, spacing: 20) {
                     // Action buttons
