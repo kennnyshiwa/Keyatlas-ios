@@ -14,16 +14,10 @@ final class ForumViewModel: @unchecked Sendable {
 
         do {
             struct CategoriesResponse: Codable, Hashable, Sendable { let data: [ForumCategory] }
-            let response: CategoriesResponse = try await api.request(path: "/api/v1/forums/categories")
+            let response: CategoriesResponse = try await api.request(path: "/api/v1/forums")
             await MainActor.run { self.categories = response.data }
         } catch {
-            // Try array directly
-            do {
-                let cats: [ForumCategory] = try await api.request(path: "/api/v1/forums/categories")
-                await MainActor.run { self.categories = cats }
-            } catch {
-                await MainActor.run { self.error = error.localizedDescription }
-            }
+            await MainActor.run { self.error = error.localizedDescription }
         }
     }
 }
@@ -36,14 +30,14 @@ final class ThreadListViewModel: @unchecked Sendable {
 
     private let api = APIClient.shared
 
-    func loadThreads(categoryId: String) async {
+    func loadThreads(categorySlug: String) async {
         await MainActor.run { self.isLoading = true; self.error = nil }
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
             struct ThreadsResponse: Codable, Hashable, Sendable { let data: [ForumThread] }
             let response: ThreadsResponse = try await api.request(
-                path: "/api/v1/forums/categories/\(categoryId)/threads"
+                path: "/api/v1/forums/\(categorySlug)/threads"
             )
             await MainActor.run { self.threads = response.data }
         } catch {

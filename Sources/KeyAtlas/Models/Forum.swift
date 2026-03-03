@@ -10,8 +10,8 @@ struct ForumCategory: Codable, Identifiable, Hashable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, slug, description
-        case threadCount = "thread_count"
-        case postCount = "post_count"
+        case threadCount
+        case postCount
     }
 }
 

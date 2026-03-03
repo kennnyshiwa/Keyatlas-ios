@@ -11,7 +11,7 @@ struct ThreadListView: View {
                 ProgressView("Loading threads…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = viewModel.error, viewModel.threads.isEmpty {
-                ErrorView(message: error) { await viewModel.loadThreads(categoryId: category.id) }
+                ErrorView(message: error) { await viewModel.loadThreads(categorySlug: category.slug) }
             } else if viewModel.threads.isEmpty {
                 EmptyStateView(
                     title: "No Threads",
@@ -76,11 +76,11 @@ struct ThreadListView: View {
         }
         .sheet(isPresented: $showNewThread) {
             NewThreadView(categoryId: category.id) {
-                Task { await viewModel.loadThreads(categoryId: category.id) }
+                Task { await viewModel.loadThreads(categorySlug: category.slug) }
             }
         }
-        .refreshable { await viewModel.loadThreads(categoryId: category.id) }
-        .task { await viewModel.loadThreads(categoryId: category.id) }
+        .refreshable { await viewModel.loadThreads(categorySlug: category.slug) }
+        .task { await viewModel.loadThreads(categorySlug: category.slug) }
     }
 }
 
