@@ -1,6 +1,6 @@
 import Foundation
 
-struct CalendarEvent: Codable, Identifiable, Sendable {
+struct CalendarEvent: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let slug: String?
@@ -16,12 +16,12 @@ struct CalendarEvent: Codable, Identifiable, Sendable {
     }
 }
 
-struct CalendarResponse: Codable, Sendable {
+struct CalendarResponse: Codable, Hashable, Sendable {
     let events: [CalendarEvent]?
     let deliveries: [DeliveryQuarter]?
 }
 
-struct DeliveryQuarter: Codable, Identifiable, Sendable {
+struct DeliveryQuarter: Codable, Identifiable, Hashable, Sendable {
     var id: String { quarter }
     let quarter: String // e.g. "Q1 2026"
     let projects: [Project]

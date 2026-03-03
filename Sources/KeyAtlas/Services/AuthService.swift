@@ -35,13 +35,13 @@ final class AuthService: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         // NextAuth uses CSRF token flow — get CSRF first
-        struct CSRFResponse: Codable, Sendable {
+        struct CSRFResponse: Codable, Hashable, Sendable {
             let csrfToken: String
         }
 
         let csrf: CSRFResponse = try await api.request(path: "/api/auth/csrf")
 
-        struct SignInBody: Codable, Sendable {
+        struct SignInBody: Codable, Hashable, Sendable {
             let email: String
             let password: String
             let csrfToken: String
@@ -57,7 +57,7 @@ final class AuthService: @unchecked Sendable {
             json: true
         )
 
-        struct SignInResponse: Codable, Sendable {
+        struct SignInResponse: Codable, Hashable, Sendable {
             let url: String?
             let ok: Bool?
             let error: String?
@@ -88,7 +88,7 @@ final class AuthService: @unchecked Sendable {
 
         let body = AuthCredentials(email: email, password: password, username: username)
 
-        struct SignUpResponse: Codable, Sendable {
+        struct SignUpResponse: Codable, Hashable, Sendable {
             let message: String?
             let user: UserSummary?
         }

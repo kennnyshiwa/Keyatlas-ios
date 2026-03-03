@@ -67,7 +67,7 @@ struct ProjectCategory: Codable, Identifiable, Hashable, Sendable {
 }
 
 /// Pricing info for a project
-struct ProjectPricing: Codable, Sendable {
+struct ProjectPricing: Codable, Hashable, Sendable {
     let minPrice: Int? // cents
     let maxPrice: Int? // cents
     let currency: String?
@@ -95,7 +95,7 @@ struct ProjectPricing: Codable, Sendable {
 }
 
 /// Timeline entry for a project
-struct TimelineEntry: Codable, Identifiable, Sendable {
+struct TimelineEntry: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let description: String?
@@ -109,7 +109,7 @@ struct TimelineEntry: Codable, Identifiable, Sendable {
 }
 
 /// Gallery image
-struct GalleryImage: Codable, Identifiable, Sendable {
+struct GalleryImage: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let url: String
     let caption: String?
@@ -117,7 +117,7 @@ struct GalleryImage: Codable, Identifiable, Sendable {
 }
 
 /// Project vendor association
-struct ProjectVendor: Codable, Identifiable, Sendable {
+struct ProjectVendor: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let vendor: Vendor?
     let url: String?
@@ -125,7 +125,7 @@ struct ProjectVendor: Codable, Identifiable, Sendable {
 }
 
 /// Comment on a project
-struct Comment: Codable, Identifiable, Sendable {
+struct Comment: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let content: String
     let createdAt: String
@@ -140,7 +140,7 @@ struct Comment: Codable, Identifiable, Sendable {
 }
 
 /// The main Project model
-struct Project: Codable, Identifiable, Sendable {
+struct Project: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let slug: String
@@ -185,7 +185,7 @@ struct Project: Codable, Identifiable, Sendable {
     }
 }
 
-struct ProjectLink: Codable, Identifiable, Sendable {
+struct ProjectLink: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let url: String

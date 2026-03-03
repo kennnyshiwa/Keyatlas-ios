@@ -13,7 +13,7 @@ final class ForumViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            struct CategoriesResponse: Codable, Sendable { let data: [ForumCategory] }
+            struct CategoriesResponse: Codable, Hashable, Sendable { let data: [ForumCategory] }
             let response: CategoriesResponse = try await api.request(path: "/api/v1/forums/categories")
             await MainActor.run { self.categories = response.data }
         } catch {
@@ -41,7 +41,7 @@ final class ThreadListViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            struct ThreadsResponse: Codable, Sendable { let data: [ForumThread] }
+            struct ThreadsResponse: Codable, Hashable, Sendable { let data: [ForumThread] }
             let response: ThreadsResponse = try await api.request(
                 path: "/api/v1/forums/categories/\(categoryId)/threads"
             )
@@ -79,7 +79,7 @@ final class ThreadDetailViewModel: @unchecked Sendable {
         await MainActor.run { self.isPosting = true }
         defer { Task { @MainActor in self.isPosting = false } }
 
-        struct ReplyBody: Codable, Sendable { let content: String }
+        struct ReplyBody: Codable, Hashable, Sendable { let content: String }
 
         do {
             try await api.requestVoid(

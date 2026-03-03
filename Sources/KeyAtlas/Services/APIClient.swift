@@ -185,19 +185,19 @@ enum APIError: Error, LocalizedError, Sendable {
     }
 }
 
-struct ErrorResponse: Codable, Sendable {
+struct ErrorResponse: Codable, Hashable, Sendable {
     let message: String?
     let error: String?
 }
 
-struct ValidationError: Codable, Sendable {
+struct ValidationError: Codable, Hashable, Sendable {
     let message: String
     let errors: [String: [String]]?
 }
 
-struct EmptyResponse: Codable, Sendable {}
+struct EmptyResponse: Codable, Hashable, Sendable {}
 
-struct UploadResponse: Codable, Sendable {
+struct UploadResponse: Codable, Hashable, Sendable {
     let url: String?
     let id: String?
 }

@@ -64,7 +64,7 @@ final class ProjectDetailViewModel: @unchecked Sendable {
         await MainActor.run { self.isPostingComment = true }
         defer { Task { @MainActor in self.isPostingComment = false } }
 
-        struct CommentBody: Codable, Sendable {
+        struct CommentBody: Codable, Hashable, Sendable {
             let content: String
         }
 

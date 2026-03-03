@@ -1,6 +1,6 @@
 import Foundation
 
-struct AppNotification: Codable, Identifiable, Sendable {
+struct AppNotification: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let type: String
     let title: String?

@@ -23,7 +23,7 @@ struct UserSummary: Codable, Identifiable, Hashable, Sendable {
 }
 
 /// Full user profile
-struct UserProfile: Codable, Identifiable, Sendable {
+struct UserProfile: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let username: String?
     let name: String?
@@ -56,7 +56,7 @@ struct UserProfile: Codable, Identifiable, Sendable {
 }
 
 /// Auth session response
-struct AuthSession: Codable, Sendable {
+struct AuthSession: Codable, Hashable, Sendable {
     let user: UserSummary?
     let accessToken: String?
     let expires: String?
@@ -69,7 +69,7 @@ struct AuthSession: Codable, Sendable {
 }
 
 /// Login/signup request
-struct AuthCredentials: Codable, Sendable {
+struct AuthCredentials: Codable, Hashable, Sendable {
     let email: String
     let password: String
     let username: String?

@@ -1,6 +1,6 @@
 import Foundation
 
-struct Guide: Codable, Identifiable, Sendable {
+struct Guide: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let slug: String

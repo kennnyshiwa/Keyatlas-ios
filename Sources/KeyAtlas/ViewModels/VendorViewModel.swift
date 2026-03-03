@@ -35,7 +35,7 @@ final class VendorDetailViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            struct VendorDetailResponse: Codable, Sendable {
+            struct VendorDetailResponse: Codable, Hashable, Sendable {
                 let vendor: Vendor
                 let projects: [Project]?
             }

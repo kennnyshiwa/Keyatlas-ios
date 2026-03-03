@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct ProjectSubmissionView: View {
     @Environment(\.dismiss) private var dismiss
@@ -272,7 +273,7 @@ struct ProjectSubmissionView: View {
         }
 
         // Build submission body
-        struct SubmitBody: Codable, Sendable {
+        struct SubmitBody: Codable, Hashable, Sendable {
             let title: String
             let slug: String
             let description: String?

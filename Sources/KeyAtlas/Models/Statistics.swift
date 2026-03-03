@@ -1,6 +1,6 @@
 import Foundation
 
-struct SiteStatistics: Codable, Sendable {
+struct SiteStatistics: Codable, Hashable, Sendable {
     let totalProjects: Int?
     let totalVendors: Int?
     let activeGroupBuys: Int?
@@ -24,7 +24,7 @@ struct SiteStatistics: Codable, Sendable {
     }
 }
 
-struct ChartDataPoint: Codable, Identifiable, Sendable {
+struct ChartDataPoint: Codable, Identifiable, Hashable, Sendable {
     var id: String { label }
     let label: String
     let value: Double

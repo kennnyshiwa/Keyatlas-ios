@@ -1,6 +1,6 @@
 import Foundation
 
-struct ForumCategory: Codable, Identifiable, Sendable {
+struct ForumCategory: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let slug: String
@@ -15,7 +15,7 @@ struct ForumCategory: Codable, Identifiable, Sendable {
     }
 }
 
-struct ForumThread: Codable, Identifiable, Sendable {
+struct ForumThread: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let slug: String?
@@ -43,7 +43,7 @@ struct ForumThread: Codable, Identifiable, Sendable {
     }
 }
 
-struct ForumPost: Codable, Identifiable, Sendable {
+struct ForumPost: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let content: String
     let author: UserSummary?

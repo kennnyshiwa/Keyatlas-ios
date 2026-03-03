@@ -133,7 +133,7 @@ struct NewThreadView: View {
         isPosting = true
         defer { isPosting = false }
 
-        struct NewThreadBody: Codable, Sendable {
+        struct NewThreadBody: Codable, Hashable, Sendable {
             let title: String
             let content: String
             let categoryId: String

@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct SettingsView: View {
     @Environment(AuthService.self) private var authService
@@ -126,7 +127,7 @@ struct SettingsView: View {
         }
 
         // Save profile fields
-        struct ProfileUpdate: Codable, Sendable {
+        struct ProfileUpdate: Codable, Hashable, Sendable {
             let username: String?
             let bio: String?
         }
@@ -142,7 +143,7 @@ struct SettingsView: View {
             )
 
             // Save notification prefs
-            struct NotifPrefs: Codable, Sendable {
+            struct NotifPrefs: Codable, Hashable, Sendable {
                 let followedUpdates: Bool
                 let statusChanges: Bool
                 let comments: Bool

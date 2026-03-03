@@ -35,7 +35,7 @@ final class ProfileViewModel: @unchecked Sendable {
 
     func loadNotifications() async {
         do {
-            struct NotifResponse: Codable, Sendable { let data: [AppNotification] }
+            struct NotifResponse: Codable, Hashable, Sendable { let data: [AppNotification] }
             let response: NotifResponse = try await api.request(
                 path: "/api/v1/notifications",
                 authenticated: true
