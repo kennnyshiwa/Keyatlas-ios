@@ -16,15 +16,37 @@ final class ProjectDetailViewModel: @unchecked Sendable {
         await MainActor.run { self.isLoading = true; self.error = nil }
         defer { Task { @MainActor in self.isLoading = false } }
 
+        let safeSlug = normalizedSlug(slug)
+        guard !safeSlug.isEmpty else {
+            await MainActor.run { self.error = "Invalid project link" }
+            return
+        }
+
         do {
             let response: APIDataResponse<Project> = try await api.request(
-                path: "/api/v1/projects/\(slug)",
+                path: "/api/v1/projects/\(safeSlug)",
                 authenticated: false
             )
             await MainActor.run { self.project = response.data }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }
+    }
+
+    private func normalizedSlug(_ raw: String) -> String {
+        if let url = URL(string: raw), let host = url.host, !host.isEmpty {
+            let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            if path.hasPrefix("projects/") {
+                return String(path.dropFirst("projects/".count))
+            }
+            if path.hasPrefix("api/auth/mobile/callback") {
+                return ""
+            }
+            if let last = path.split(separator: "/").last {
+                return String(last)
+            }
+        }
+        return raw.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 
     func toggleFollow() async {

@@ -15,6 +15,8 @@ struct ProjectDetailView: View {
                 ErrorView(message: error) { await viewModel.loadProject(slug: slug) }
             } else if let project = viewModel.project {
                 projectContent(project)
+            } else {
+                ErrorView(message: "Unable to load project") { await viewModel.loadProject(slug: slug) }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
