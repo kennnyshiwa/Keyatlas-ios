@@ -17,11 +17,11 @@ final class ProjectDetailViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            let project: Project = try await api.request(
+            let response: APIDataResponse<Project> = try await api.request(
                 path: "/api/v1/projects/\(slug)",
-                authenticated: true
+                authenticated: false
             )
-            await MainActor.run { self.project = project }
+            await MainActor.run { self.project = response.data }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }

@@ -201,3 +201,7 @@ struct UploadResponse: Codable, Hashable, Sendable {
     let url: String?
     let id: String?
 }
+
+struct APIDataResponse<T: Codable & Sendable>: Codable, Sendable {
+    let data: T
+}
