@@ -1,6 +1,8 @@
 import SwiftUI
 import PhotosUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
 struct SettingsView: View {
     @Environment(AuthService.self) private var authService

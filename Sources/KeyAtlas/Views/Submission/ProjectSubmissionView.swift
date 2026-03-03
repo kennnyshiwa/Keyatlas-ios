@@ -1,6 +1,8 @@
 import SwiftUI
 import PhotosUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
 struct ProjectSubmissionView: View {
     @Environment(\.dismiss) private var dismiss

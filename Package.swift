@@ -5,7 +5,6 @@ let package = Package(
     name: "KeyAtlas",
     platforms: [
         .iOS(.v17),
-        .macOS(.v12),
     ],
     dependencies: [
         .package(url: "https://github.com/kean/Nuke.git", from: "12.0.0"),
