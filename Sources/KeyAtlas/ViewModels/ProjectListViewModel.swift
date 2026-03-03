@@ -68,7 +68,7 @@ final class ProjectListViewModel: @unchecked Sendable {
             let response: PaginatedResponse<Project> = try await api.request(
                 path: "/api/v1/projects",
                 query: query,
-                authenticated: true
+                authenticated: false
             )
 
             await MainActor.run {
