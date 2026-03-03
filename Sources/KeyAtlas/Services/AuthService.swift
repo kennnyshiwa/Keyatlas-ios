@@ -122,20 +122,25 @@ final class AuthService: @unchecked Sendable {
 
     /// Sign in with OAuth (Discord or Google)
     func signInWithOAuth(result: OAuthResult) async throws {
-        // Store the API key
+        // Store API key from mobile OAuth callback
         try KeychainService.save(result.token, for: .authToken)
 
-        // Build a user from the OAuth result — restore full session
-        await restoreSession()
-        if currentUser != nil { return }
-
-        // Fallback: if session restore fails, set minimal user
-        let jsonStr = """
-        {"id":"\(result.userId)","username":"\(result.username)","name":"\(result.username)","image":"\(result.avatar ?? "")"}
-        """
-        let user = try JSONDecoder().decode(UserSummary.self, from: Data(jsonStr.utf8))
-        await MainActor.run {
-            self.currentUser = user
+        // Resolve authenticated profile immediately via API-key auth
+        do {
+            let response: APIDataResponse<UserProfile> = try await api.request(path: "/api/v1/profile", authenticated: true)
+            let profile = response.data
+            await MainActor.run {
+                self.currentUser = UserSummary(
+                    id: profile.id,
+                    username: profile.username,
+                    name: profile.name,
+                    avatarUrl: profile.image,
+                    image: profile.image
+                )
+            }
+        } catch {
+            // Keep token but surface error so UI can retry/sign out
+            throw error
         }
     }
 

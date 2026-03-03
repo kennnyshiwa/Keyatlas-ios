@@ -15,10 +15,11 @@ struct ProfileTabView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let profile = viewModel.profile {
                     profileContent(profile)
+                } else if let error = viewModel.error {
+                    ErrorView(message: error) { await viewModel.loadCurrentProfile() }
                 } else {
                     // Authenticated but no profile loaded yet
                     ProgressView()
-                        .task { await viewModel.loadCurrentProfile() }
                 }
             }
             .navigationTitle("Profile")
