@@ -62,12 +62,10 @@ struct ProjectDetailView: View {
 
                     // Description
                     if let desc = project.description, !desc.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 10) {
                             Text("Description")
                                 .font(.headline)
-                            Text(desc.keyAtlasDisplayText)
-                                .font(.body)
-                                .fixedSize(horizontal: false, vertical: true)
+                            descriptionContent(desc)
                         }
                     }
 
@@ -184,6 +182,91 @@ struct ProjectDetailView: View {
         .padding(.vertical, 6)
         .background(.quaternary)
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Description rendering (text + inline images)
+
+    @ViewBuilder
+    private func descriptionContent(_ raw: String) -> some View {
+        let segments = descriptionSegments(from: raw)
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(segments) { segment in
+                switch segment.kind {
+                case .text(let text):
+                    if !text.isEmpty {
+                        Text(text)
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                case .image(let url):
+                    CachedImage(url: url, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 120, maxHeight: 340)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            }
+        }
+    }
+
+    private struct DescriptionSegment: Identifiable {
+        enum Kind {
+            case text(String)
+            case image(String)
+        }
+        let id: Int
+        let kind: Kind
+    }
+
+    private func descriptionSegments(from raw: String) -> [DescriptionSegment] {
+        let pattern = #"<img[^>]*src=[\"']([^\"']+)[\"'][^>]*>"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return [DescriptionSegment(id: 0, kind: .text(raw.keyAtlasDisplayText))]
+        }
+
+        let ns = raw as NSString
+        let matches = regex.matches(in: raw, options: [], range: NSRange(location: 0, length: ns.length))
+        if matches.isEmpty {
+            return [DescriptionSegment(id: 0, kind: .text(raw.keyAtlasDisplayText))]
+        }
+
+        var segments: [DescriptionSegment] = []
+        var cursor = 0
+        var id = 0
+
+        for m in matches {
+            let full = m.range(at: 0)
+            let src = m.range(at: 1)
+
+            if full.location > cursor {
+                let textChunk = ns.substring(with: NSRange(location: cursor, length: full.location - cursor))
+                let cleaned = textChunk.keyAtlasDisplayText
+                if !cleaned.isEmpty {
+                    segments.append(DescriptionSegment(id: id, kind: .text(cleaned)))
+                    id += 1
+                }
+            }
+
+            if src.location != NSNotFound {
+                let url = ns.substring(with: src)
+                if !url.isEmpty {
+                    segments.append(DescriptionSegment(id: id, kind: .image(url)))
+                    id += 1
+                }
+            }
+
+            cursor = full.location + full.length
+        }
+
+        if cursor < ns.length {
+            let trailing = ns.substring(from: cursor).keyAtlasDisplayText
+            if !trailing.isEmpty {
+                segments.append(DescriptionSegment(id: id, kind: .text(trailing)))
+            }
+        }
+
+        return segments.isEmpty
+            ? [DescriptionSegment(id: 0, kind: .text(raw.keyAtlasDisplayText))]
+            : segments
     }
 
     // MARK: - Vendors
