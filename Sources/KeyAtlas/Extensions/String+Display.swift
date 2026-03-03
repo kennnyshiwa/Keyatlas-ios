@@ -20,17 +20,40 @@ extension String {
                 documentAttributes: nil
                ) {
                 output = attributed.string
+            } else {
+                // Hard fallback: strip tags if rich parsing fails
+                output = trimmed.replacingOccurrences(
+                    of: #"<[^>]+>"#,
+                    with: " ",
+                    options: .regularExpression
+                )
             }
         }
 
-        // 2) Remove noisy URLs from scraped forum descriptions
+        // 2) Decode common HTML entities if still present
+        if output.contains("&") {
+            let wrapped = "<span>\(output)</span>"
+            if let data = wrapped.data(using: .utf8),
+               let attributed = try? NSAttributedString(
+                data: data,
+                options: [
+                    .documentType: NSAttributedString.DocumentType.html,
+                    .characterEncoding: String.Encoding.utf8.rawValue,
+                ],
+                documentAttributes: nil
+               ) {
+                output = attributed.string
+            }
+        }
+
+        // 3) Remove noisy URLs from scraped forum descriptions
         output = output.replacingOccurrences(
             of: #"https?://\S+"#,
             with: "",
             options: .regularExpression
         )
 
-        // 3) Normalize whitespace/newlines
+        // 4) Normalize whitespace/newlines
         output = output
             .replacingOccurrences(of: "\r", with: "\n")
             .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)

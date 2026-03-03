@@ -32,7 +32,9 @@ struct ProjectCardView: View {
                 // Title
                 Text(project.title)
                     .font(.headline)
-                    .lineLimit(2)
+                    .lineLimit(3)
+                    .truncationMode(.tail)
+                    .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
