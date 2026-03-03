@@ -2,3 +2,5 @@
 .swiftpm/xcode/xcuserdata/
 *.xcuserstate
 DerivedData/
+KeyAtlas.xcodeproj/xcuserdata/
+KeyAtlas.xcodeproj/project.xcworkspace/xcuserdata/
