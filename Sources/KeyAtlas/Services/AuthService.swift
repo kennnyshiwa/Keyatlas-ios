@@ -19,13 +19,29 @@ final class AuthService: @unchecked Sendable {
             return
         }
         do {
-            let session: AuthSession = try await api.request(path: "/api/auth/session", authenticated: true)
+            // Try API key auth first (mobile OAuth flow)
+            let response: APIDataResponse<UserProfile> = try await api.request(path: "/api/v1/profile", authenticated: true)
+            let profile = response.data
             await MainActor.run {
-                self.currentUser = session.user
+                self.currentUser = UserSummary(
+                    id: profile.id,
+                    username: profile.username,
+                    name: profile.name,
+                    avatarUrl: profile.image,
+                    image: profile.image
+                )
             }
         } catch {
-            // Session expired or invalid — clear stored credentials
-            KeychainService.clearAll()
+            // Try NextAuth session as fallback
+            do {
+                let session: AuthSession = try await api.request(path: "/api/auth/session", authenticated: true)
+                await MainActor.run {
+                    self.currentUser = session.user
+                }
+            } catch {
+                // Session expired or invalid — clear stored credentials
+                KeychainService.clearAll()
+            }
         }
     }
 

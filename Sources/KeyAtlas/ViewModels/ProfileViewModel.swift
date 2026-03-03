@@ -26,8 +26,8 @@ final class ProfileViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            let profile: UserProfile = try await api.request(path: "/api/v1/users/me", authenticated: true)
-            await MainActor.run { self.profile = profile }
+            let response: APIDataResponse<UserProfile> = try await api.request(path: "/api/v1/profile", authenticated: true)
+            await MainActor.run { self.profile = response.data }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }
