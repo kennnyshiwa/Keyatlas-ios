@@ -200,7 +200,12 @@ struct ProjectDetailView: View {
                     if !text.isEmpty {
                         Text(text)
                             .font(.body)
+                            .lineLimit(nil)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .fixedSize(horizontal: false, vertical: true)
+                            .allowsTightening(true)
+                            .minimumScaleFactor(0.92)
                     }
                 case .image(let url):
                     CachedImage(url: url, contentMode: .fit)

@@ -46,14 +46,17 @@ extension String {
             }
         }
 
-        // 3) Remove noisy URLs from scraped forum descriptions
+        // 3) Insert safe breakpoints for long unbroken runs (causes horizontal overflow on iOS)
+        output = output.keyAtlasSoftWrappedLongRuns(limit: 32)
+
+        // 4) Remove noisy URLs from scraped forum descriptions
         output = output.replacingOccurrences(
             of: #"https?://\S+"#,
             with: "",
             options: .regularExpression
         )
 
-        // 4) Normalize whitespace/newlines
+        // 5) Normalize whitespace/newlines
         output = output
             .replacingOccurrences(of: "\r", with: "\n")
             .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
@@ -61,5 +64,54 @@ extension String {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         return output
+    }
+
+    /// Add zero-width break opportunities to very long unbroken runs to prevent horizontal overflow.
+    func keyAtlasSoftWrappedLongRuns(limit: Int = 32) -> String {
+        guard !isEmpty else { return self }
+
+        var result = ""
+        var run = ""
+
+        for ch in self {
+            if ch.isWhitespace || ch.isNewline {
+                if run.count > limit {
+                    result += run.chunkedWithZeroWidthSpace(every: limit)
+                } else {
+                    result += run
+                }
+                run.removeAll(keepingCapacity: true)
+                result.append(ch)
+            } else {
+                run.append(ch)
+            }
+        }
+
+        if run.count > limit {
+            result += run.chunkedWithZeroWidthSpace(every: limit)
+        } else {
+            result += run
+        }
+
+        return result
+    }
+}
+
+private extension String {
+    func chunkedWithZeroWidthSpace(every size: Int) -> String {
+        guard size > 0, count > size else { return self }
+        var out = ""
+        var i = startIndex
+        var step = 0
+        while i < endIndex {
+            out.append(self[i])
+            step += 1
+            if step == size {
+                out.append("\u{200B}")
+                step = 0
+            }
+            i = index(after: i)
+        }
+        return out
     }
 }
