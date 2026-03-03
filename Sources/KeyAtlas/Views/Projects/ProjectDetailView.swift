@@ -95,7 +95,7 @@ struct ProjectDetailView: View {
                 .padding()
             }
         }
-        .navigationTitle(project.title)
+        .navigationTitle("Project")
     }
 
     // MARK: - Hero overlay
@@ -106,6 +106,8 @@ struct ProjectDetailView: View {
             Text(project.title)
                 .font(.title2)
                 .fontWeight(.bold)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.white)
                 .shadow(radius: 4)
             if let designer = project.designer {

@@ -1,5 +1,49 @@
 import SwiftUI
 
+private func normalizeProfileProjectSlug(_ raw: String) -> String {
+    if let url = URL(string: raw), let host = url.host, !host.isEmpty {
+        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if path.hasPrefix("projects/") {
+            return String(path.dropFirst("projects/".count))
+        }
+        if path.hasPrefix("api/auth/mobile/callback") {
+            return ""
+        }
+        if let last = path.split(separator: "/").last, !last.isEmpty {
+            return String(last)
+        }
+    }
+    return raw.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+}
+
+private struct ProfileProjectRow: View {
+    let project: Project
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            CachedImage(url: project.heroImageUrl)
+                .frame(width: 92, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(project.title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(project.status.displayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(10)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
 struct ProfileTabView: View {
     @Environment(AuthService.self) private var authService
     @State private var viewModel = ProfileViewModel()
@@ -82,13 +126,19 @@ struct ProfileTabView: View {
                             .padding(.horizontal)
 
                         ForEach(projects) { project in
-                            NavigationLink {
-                                ProjectDetailView(slug: project.slug)
-                            } label: {
-                                ProjectCardView(project: project)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            let safeSlug = normalizeProfileProjectSlug(project.slug)
+                            Group {
+                                if safeSlug.isEmpty {
+                                    ProfileProjectRow(project: project)
+                                } else {
+                                    NavigationLink {
+                                        ProjectDetailView(slug: safeSlug)
+                                    } label: {
+                                        ProfileProjectRow(project: project)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
-                            .buttonStyle(.plain)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 12)
                         }
@@ -203,14 +253,19 @@ struct PublicProfileView: View {
                                     .font(.headline)
                                     .padding(.horizontal)
                                 ForEach(projects) { project in
-                                    let safeSlug = normalizedProjectSlug(project.slug)
-                                    NavigationLink {
-                                        ProjectDetailView(slug: safeSlug)
-                                    } label: {
-                                        ProjectCardView(project: project)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    let safeSlug = normalizeProfileProjectSlug(project.slug)
+                                    Group {
+                                        if safeSlug.isEmpty {
+                                            ProfileProjectRow(project: project)
+                                        } else {
+                                            NavigationLink {
+                                                ProjectDetailView(slug: safeSlug)
+                                            } label: {
+                                                ProfileProjectRow(project: project)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
                                     }
-                                    .buttonStyle(.plain)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal, 12)
                                 }
@@ -225,13 +280,19 @@ struct PublicProfileView: View {
         .task { await viewModel.loadProfile(username: username) }
     }
 
-    private func normalizedProjectSlug(_ raw: String) -> String {
+    private func normalizeProfileProjectSlug(_ raw: String) -> String {
         // Defensive: some payloads may send full URLs instead of slugs
         if let url = URL(string: raw), let host = url.host, !host.isEmpty {
             let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             if path.hasPrefix("projects/") {
                 return String(path.dropFirst("projects/".count))
             }
+
+            // Ignore auth callback URLs accidentally stored in content fields
+            if path.hasPrefix("api/auth/mobile/callback") {
+                return ""
+            }
+
             if let last = path.split(separator: "/").last, !last.isEmpty {
                 return String(last)
             }
