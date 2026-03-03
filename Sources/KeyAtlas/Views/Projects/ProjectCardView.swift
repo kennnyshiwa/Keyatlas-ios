@@ -2,13 +2,19 @@ import SwiftUI
 
 /// Card view for project in a list
 struct ProjectCardView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let project: Project
+
+    private var heroHeight: CGFloat {
+        horizontalSizeClass == .compact ? 132 : 180
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Hero image
             CachedImage(url: project.heroImageUrl)
-                .frame(height: 180)
+                .frame(maxWidth: .infinity)
+                .frame(height: heroHeight)
                 .clipped()
 
             VStack(alignment: .leading, spacing: 8) {
@@ -27,6 +33,8 @@ struct ProjectCardView: View {
                 Text(project.title)
                     .font(.headline)
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Designer
                 if let designer = project.designer {
@@ -71,7 +79,9 @@ struct ProjectCardView: View {
             }
             .padding(12)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .cardStyle()
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(project.title), \(project.status.displayName)")
     }
