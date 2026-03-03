@@ -95,7 +95,10 @@ struct ProjectDetailView: View {
                     commentsSection(project)
                 }
                 .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .clipped()
         }
         .navigationTitle("Project")
     }
@@ -105,10 +108,11 @@ struct ProjectDetailView: View {
     private func heroOverlay(_ project: Project) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             StatusBadge(status: project.status)
-            Text(project.title)
+            Text(project.title.keyAtlasDisplayText)
                 .font(.title2)
                 .fontWeight(.bold)
                 .lineLimit(3)
+                .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.white)
                 .shadow(radius: 4)
@@ -357,8 +361,16 @@ struct ProjectDetailView: View {
                     Button {
                         openURL(url)
                     } label: {
-                        Label(link.title, systemImage: "link")
-                            .font(.subheadline)
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "link")
+                                .font(.caption)
+                                .padding(.top, 2)
+                            Text(link.title.keyAtlasDisplayText)
+                                .font(.subheadline)
+                                .lineLimit(3)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
                     .accessibilityLabel("Open link: \(link.title)")
                 }
