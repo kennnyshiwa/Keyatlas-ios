@@ -1,0 +1,207 @@
+import Foundation
+
+/// Project status in the KeyAtlas lifecycle
+enum ProjectStatus: String, Codable, CaseIterable, Sendable {
+    case interestCheck = "INTEREST_CHECK"
+    case groupBuy = "GROUP_BUY"
+    case production = "PRODUCTION"
+    case shipping = "SHIPPING"
+    case completed = "COMPLETED"
+    case cancelled = "CANCELLED"
+
+    var displayName: String {
+        switch self {
+        case .interestCheck: "Interest Check"
+        case .groupBuy: "Group Buy"
+        case .production: "Production"
+        case .shipping: "Shipping"
+        case .completed: "Completed"
+        case .cancelled: "Cancelled"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .interestCheck: "lightbulb"
+        case .groupBuy: "cart"
+        case .production: "hammer"
+        case .shipping: "shippingbox"
+        case .completed: "checkmark.circle"
+        case .cancelled: "xmark.circle"
+        }
+    }
+
+    var colorName: String {
+        switch self {
+        case .interestCheck: "blue"
+        case .groupBuy: "green"
+        case .production: "orange"
+        case .shipping: "purple"
+        case .completed: "gray"
+        case .cancelled: "red"
+        }
+    }
+}
+
+/// Category for a project (keycaps, switches, keyboards, etc.)
+struct ProjectCategory: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let slug: String
+    let description: String?
+    let projectCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, slug, description
+        case projectCount = "project_count"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        slug = try container.decode(String.self, forKey: .slug)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        projectCount = try container.decodeIfPresent(Int.self, forKey: .projectCount)
+    }
+}
+
+/// Pricing info for a project
+struct ProjectPricing: Codable, Sendable {
+    let minPrice: Int? // cents
+    let maxPrice: Int? // cents
+    let currency: String?
+
+    enum CodingKeys: String, CodingKey {
+        case minPrice = "min_price"
+        case maxPrice = "max_price"
+        case currency
+    }
+
+    var formattedRange: String? {
+        guard let min = minPrice else { return nil }
+        let curr = currency ?? "USD"
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = curr
+
+        let minStr = formatter.string(from: NSNumber(value: Double(min) / 100.0)) ?? "$\(min/100)"
+        if let max = maxPrice, max != min {
+            let maxStr = formatter.string(from: NSNumber(value: Double(max) / 100.0)) ?? "$\(max/100)"
+            return "\(minStr) – \(maxStr)"
+        }
+        return minStr
+    }
+}
+
+/// Timeline entry for a project
+struct TimelineEntry: Codable, Identifiable, Sendable {
+    let id: String
+    let title: String
+    let description: String?
+    let date: String?
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, date
+        case createdAt = "created_at"
+    }
+}
+
+/// Gallery image
+struct GalleryImage: Codable, Identifiable, Sendable {
+    let id: String
+    let url: String
+    let caption: String?
+    let position: Int?
+}
+
+/// Project vendor association
+struct ProjectVendor: Codable, Identifiable, Sendable {
+    let id: String
+    let vendor: Vendor?
+    let url: String?
+    let region: String?
+}
+
+/// Comment on a project
+struct Comment: Codable, Identifiable, Sendable {
+    let id: String
+    let content: String
+    let createdAt: String
+    let updatedAt: String?
+    let author: UserSummary?
+
+    enum CodingKeys: String, CodingKey {
+        case id, content, author
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+/// The main Project model
+struct Project: Codable, Identifiable, Sendable {
+    let id: String
+    let title: String
+    let slug: String
+    let description: String?
+    let status: ProjectStatus
+    let heroImageUrl: String?
+    let category: ProjectCategory?
+    let categoryId: String?
+    let designer: UserSummary?
+    let pricing: ProjectPricing?
+    let vendors: [ProjectVendor]?
+    let gallery: [GalleryImage]?
+    let timeline: [TimelineEntry]?
+    let comments: [Comment]?
+    let tags: [String]?
+    let links: [ProjectLink]?
+    let estimatedDelivery: String?
+    let gbStartDate: String?
+    let gbEndDate: String?
+    let followCount: Int?
+    let favoriteCount: Int?
+    let isFollowing: Bool?
+    let isFavorited: Bool?
+    let isFeatured: Bool?
+    let createdAt: String
+    let updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, slug, description, status, category, tags, links, vendors, gallery, timeline, comments, designer, pricing
+        case heroImageUrl = "hero_image_url"
+        case categoryId = "category_id"
+        case estimatedDelivery = "estimated_delivery"
+        case gbStartDate = "gb_start_date"
+        case gbEndDate = "gb_end_date"
+        case followCount = "follow_count"
+        case favoriteCount = "favorite_count"
+        case isFollowing = "is_following"
+        case isFavorited = "is_favorited"
+        case isFeatured = "is_featured"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct ProjectLink: Codable, Identifiable, Sendable {
+    let id: String
+    let title: String
+    let url: String
+}
+
+/// Paginated response wrapper
+struct PaginatedResponse<T: Codable & Sendable>: Codable, Sendable {
+    let data: [T]
+    let total: Int?
+    let page: Int?
+    let pageSize: Int?
+    let hasMore: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case data, total, page
+        case pageSize = "page_size"
+        case hasMore = "has_more"
+    }
+}
