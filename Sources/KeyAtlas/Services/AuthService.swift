@@ -104,6 +104,25 @@ final class AuthService: @unchecked Sendable {
         try await signIn(email: email, password: password)
     }
 
+    /// Sign in with OAuth (Discord or Google)
+    func signInWithOAuth(result: OAuthResult) async throws {
+        // Store the API key
+        try KeychainService.save(result.token, for: .authToken)
+
+        // Build a user from the OAuth result — restore full session
+        await restoreSession()
+        if currentUser != nil { return }
+
+        // Fallback: if session restore fails, set minimal user
+        let jsonStr = """
+        {"id":"\(result.userId)","username":"\(result.username)","name":"\(result.username)","image":"\(result.avatar ?? "")"}
+        """
+        let user = try JSONDecoder().decode(UserSummary.self, from: Data(jsonStr.utf8))
+        await MainActor.run {
+            self.currentUser = user
+        }
+    }
+
     /// Sign out and clear stored credentials
     func signOut() async {
         // Try to call server sign-out

@@ -26,6 +26,7 @@
 		6B1267BAEC582998D3A90B9B /* DiscoverViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9549DCDD9955A37DF28E7171 /* DiscoverViewModel.swift */; };
 		707B22ABC8199D537428F9CD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9240B16E305ED558A3880D05 /* Assets.xcassets */; };
 		78D1E36EB7799AAF6DF439AF /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 800D18EDEF57A596A5C76DE7 /* SignUpView.swift */; };
+		8087ED2DB83279261241E09D /* OAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DDF54B00634351515BA1C48 /* OAuthService.swift */; };
 		827148069ED487E97670CA3F /* Color+KeyAtlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88AFDCFC69A866049BB44AC3 /* Color+KeyAtlas.swift */; };
 		8691B59BE20F1A09C39A5974 /* KeyAtlasApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B32BA0E3674E084F1E65D53 /* KeyAtlasApp.swift */; };
 		8A5747437702ECF5A7FD8EE4 /* ProjectSubmissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79473D80B7756A1E0ECF3C9A /* ProjectSubmissionView.swift */; };
@@ -100,6 +101,7 @@
 		972AB0414A2CADE449BE11FC /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		9AF1394010EBC325440943ED /* ErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorView.swift; sourceTree = "<group>"; };
 		9B3022E81E487FA120980BE2 /* CachedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedImage.swift; sourceTree = "<group>"; };
+		9DDF54B00634351515BA1C48 /* OAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthService.swift; sourceTree = "<group>"; };
 		A21FF178C3C5B72F6D06C574 /* Vendor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vendor.swift; sourceTree = "<group>"; };
 		A61E73588C8B9A873066EB81 /* GuideDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideDetailView.swift; sourceTree = "<group>"; };
 		B26340FE8C34C95A1A99649E /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -350,6 +352,7 @@
 				623282680FC5F95C82F13684 /* APIClient.swift */,
 				F1FF9CB72BE842CA9AE6BF1C /* AuthService.swift */,
 				898A1219FC31538C83F231E3 /* KeychainService.swift */,
+				9DDF54B00634351515BA1C48 /* OAuthService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -450,6 +453,7 @@
 				D1716736426EFADC90E49D9D /* KeychainService.swift in Sources */,
 				62376AAD5A996243572E3FEF /* LoginView.swift in Sources */,
 				02DD598C03B5BF9991D5285E /* Notification.swift in Sources */,
+				8087ED2DB83279261241E09D /* OAuthService.swift in Sources */,
 				07017F279B4B42EF277CFB48 /* ProfileView.swift in Sources */,
 				A38C4CA2DAE46753797CC188 /* ProfileViewModel.swift in Sources */,
 				942AE793A64FFC33FE064906 /* Project.swift in Sources */,
