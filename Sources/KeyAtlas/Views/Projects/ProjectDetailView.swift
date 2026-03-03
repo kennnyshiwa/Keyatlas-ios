@@ -65,8 +65,9 @@ struct ProjectDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Description")
                                 .font(.headline)
-                            Text(desc)
+                            Text(desc.keyAtlasDisplayText)
                                 .font(.body)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
 
