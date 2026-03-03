@@ -8,6 +8,7 @@ enum ProjectStatus: String, Codable, CaseIterable, Sendable {
     case shipping = "SHIPPING"
     case completed = "COMPLETED"
     case cancelled = "CANCELLED"
+    case inStock = "IN_STOCK"
 
     var displayName: String {
         switch self {
@@ -17,6 +18,7 @@ enum ProjectStatus: String, Codable, CaseIterable, Sendable {
         case .shipping: "Shipping"
         case .completed: "Completed"
         case .cancelled: "Cancelled"
+        case .inStock: "In Stock"
         }
     }
 
@@ -28,6 +30,7 @@ enum ProjectStatus: String, Codable, CaseIterable, Sendable {
         case .shipping: "shippingbox"
         case .completed: "checkmark.circle"
         case .cancelled: "xmark.circle"
+        case .inStock: "shippingbox.fill"
         }
     }
 
@@ -39,6 +42,7 @@ enum ProjectStatus: String, Codable, CaseIterable, Sendable {
         case .shipping: "purple"
         case .completed: "gray"
         case .cancelled: "red"
+        case .inStock: "teal"
         }
     }
 }

@@ -13,6 +13,7 @@ extension Color {
         case .shipping: .purple
         case .completed: .gray
         case .cancelled: .red
+        case .inStock: .teal
         }
     }
 }
