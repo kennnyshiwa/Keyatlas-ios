@@ -13,8 +13,8 @@ final class StatisticsViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            let stats: SiteStatistics = try await api.request(path: "/api/v1/statistics")
-            await MainActor.run { self.stats = stats }
+            let response: APIDataResponse<SiteStatistics> = try await api.request(path: "/api/v1/statistics")
+            await MainActor.run { self.stats = response.data }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }

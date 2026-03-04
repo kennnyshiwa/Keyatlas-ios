@@ -18,7 +18,7 @@ struct StatisticsView: View {
                         summaryCards(stats)
 
                         // Projects by Category pie chart
-                        if let data = stats.projectsByCategory, !data.isEmpty {
+                        if let data = stats.categoryChartData, !data.isEmpty {
                             chartSection(title: "Projects by Category") {
                                 Chart(data) { point in
                                     SectorMark(
@@ -33,7 +33,7 @@ struct StatisticsView: View {
                         }
 
                         // Projects by Status pie chart
-                        if let data = stats.projectsByStatus, !data.isEmpty {
+                        if let data = stats.statusChartData, !data.isEmpty {
                             chartSection(title: "Projects by Status") {
                                 Chart(data) { point in
                                     SectorMark(
@@ -68,7 +68,7 @@ struct StatisticsView: View {
                         }
 
                         // Top Designers bar chart
-                        if let data = stats.topDesigners, !data.isEmpty {
+                        if let data = stats.designerChartData, !data.isEmpty {
                             chartSection(title: "Top 10 Designers") {
                                 Chart(data) { point in
                                     BarMark(
@@ -82,7 +82,7 @@ struct StatisticsView: View {
                         }
 
                         // Top Vendors bar chart
-                        if let data = stats.topVendors, !data.isEmpty {
+                        if let data = stats.vendorChartData, !data.isEmpty {
                             chartSection(title: "Top 10 Vendors") {
                                 Chart(data) { point in
                                     BarMark(
