@@ -8,9 +8,14 @@ extension String {
 
         var output = trimmed
 
-        // 1) HTML -> plain text when needed
+        // 1) HTML -> plain text when needed (preserve visual line breaks)
         if trimmed.contains("<") && trimmed.contains(">") {
-            if let data = trimmed.data(using: .utf8),
+            var html = trimmed
+            // Preserve breaks for common block tags before attributed conversion
+            html = html.replacingOccurrences(of: #"(?i)<br\s*/?>"#, with: "\n", options: .regularExpression)
+            html = html.replacingOccurrences(of: #"(?i)</(p|div|li|h[1-6]|section|article|blockquote)>"#, with: "\n", options: .regularExpression)
+
+            if let data = html.data(using: .utf8),
                let attributed = try? NSAttributedString(
                 data: data,
                 options: [
@@ -22,7 +27,7 @@ extension String {
                 output = attributed.string
             } else {
                 // Hard fallback: strip tags if rich parsing fails
-                output = trimmed.replacingOccurrences(
+                output = html.replacingOccurrences(
                     of: #"<[^>]+>"#,
                     with: " ",
                     options: .regularExpression
@@ -46,17 +51,13 @@ extension String {
             }
         }
 
-        // 3) Insert safe breakpoints for long unbroken runs (causes horizontal overflow on iOS)
+        // 3) Fix common mojibake apostrophes seen in imported content
+        output = output.replacingOccurrences(of: "�", with: "'")
+
+        // 4) Insert safe breakpoints for long unbroken runs (causes horizontal overflow on iOS)
         output = output.keyAtlasSoftWrappedLongRuns(limit: 32)
 
-        // 4) Remove noisy URLs from scraped forum descriptions
-        output = output.replacingOccurrences(
-            of: #"https?://\S+"#,
-            with: "",
-            options: .regularExpression
-        )
-
-        // 5) Normalize whitespace/newlines
+        // 5) Normalize whitespace/newlines while preserving paragraph structure
         output = output
             .replacingOccurrences(of: "\r", with: "\n")
             .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
