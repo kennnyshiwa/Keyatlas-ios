@@ -246,6 +246,16 @@ struct ProjectDetailView: View {
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 120, maxHeight: 340)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+                case .link(let label, let url):
+                    if let linkURL = URL(string: url) {
+                        Link(label, destination: linkURL)
+                            .font(.body)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(label)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -255,13 +265,14 @@ struct ProjectDetailView: View {
         enum Kind {
             case text(String)
             case image(String)
+            case link(label: String, url: String)
         }
         let id: Int
         let kind: Kind
     }
 
     private func descriptionSegments(from raw: String) -> [DescriptionSegment] {
-        let pattern = #"<img[^>]*src=[\"']([^\"']+)[\"'][^>]*>"#
+        let pattern = #"<img[^>]*src=[\"']([^\"']+)[\"'][^>]*>|<a[^>]*href=[\"']([^\"']+)[\"'][^>]*>([\s\S]*?)</a>"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
             return [DescriptionSegment(id: 0, kind: .text(raw.keyAtlasDisplayText))]
         }
@@ -278,7 +289,6 @@ struct ProjectDetailView: View {
 
         for m in matches {
             let full = m.range(at: 0)
-            let src = m.range(at: 1)
 
             if full.location > cursor {
                 let textChunk = ns.substring(with: NSRange(location: cursor, length: full.location - cursor))
@@ -289,10 +299,22 @@ struct ProjectDetailView: View {
                 }
             }
 
-            if src.location != NSNotFound {
-                let url = ns.substring(with: src)
+            let imgSrc = m.range(at: 1)
+            let linkHref = m.range(at: 2)
+            let linkLabel = m.range(at: 3)
+
+            if imgSrc.location != NSNotFound {
+                let url = ns.substring(with: imgSrc)
                 if !url.isEmpty {
                     segments.append(DescriptionSegment(id: id, kind: .image(url)))
+                    id += 1
+                }
+            } else if linkHref.location != NSNotFound {
+                let url = ns.substring(with: linkHref)
+                let labelRaw = linkLabel.location != NSNotFound ? ns.substring(with: linkLabel) : url
+                let label = labelRaw.keyAtlasDisplayText.isEmpty ? url : labelRaw.keyAtlasDisplayText
+                if !url.isEmpty {
+                    segments.append(DescriptionSegment(id: id, kind: .link(label: label, url: url)))
                     id += 1
                 }
             }
