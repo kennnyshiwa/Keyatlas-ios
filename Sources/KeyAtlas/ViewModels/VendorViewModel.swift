@@ -35,14 +35,14 @@ final class VendorDetailViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            struct VendorPayload: Codable, Hashable, Sendable {
+            struct VendorPayload: Codable, Sendable {
                 let data: VendorData
             }
             struct VendorProjectLite: Codable, Hashable, Sendable {
-                let id: String
-                let title: String
-                let slug: String
-                let status: ProjectStatus
+                let id: String?
+                let title: String?
+                let slug: String?
+                let statusRaw: String?
                 let heroImage: String?
                 let createdAt: String?
                 let updatedAt: String?
@@ -52,6 +52,28 @@ final class VendorDetailViewModel: @unchecked Sendable {
                     case heroImage = "hero_image_url"
                     case createdAt = "created_at"
                     case updatedAt = "updated_at"
+                }
+
+                init(from decoder: Decoder) throws {
+                    let c = try decoder.container(keyedBy: CodingKeys.self)
+                    id = try c.decodeIfPresent(String.self, forKey: .id)
+                    title = try c.decodeIfPresent(String.self, forKey: .title)
+                    slug = try c.decodeIfPresent(String.self, forKey: .slug)
+                    statusRaw = try c.decodeIfPresent(String.self, forKey: .status)
+                    heroImage = try c.decodeIfPresent(String.self, forKey: .heroImage)
+                    createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
+                    updatedAt = try c.decodeIfPresent(String.self, forKey: .updatedAt)
+                }
+
+                func encode(to encoder: Encoder) throws {
+                    var c = encoder.container(keyedBy: CodingKeys.self)
+                    try c.encodeIfPresent(id, forKey: .id)
+                    try c.encodeIfPresent(title, forKey: .title)
+                    try c.encodeIfPresent(slug, forKey: .slug)
+                    try c.encodeIfPresent(statusRaw, forKey: .status)
+                    try c.encodeIfPresent(heroImage, forKey: .heroImage)
+                    try c.encodeIfPresent(createdAt, forKey: .createdAt)
+                    try c.encodeIfPresent(updatedAt, forKey: .updatedAt)
                 }
             }
 
@@ -81,13 +103,16 @@ final class VendorDetailViewModel: @unchecked Sendable {
                 createdAt: nil
             )
             let nowISO = ISO8601DateFormatter().string(from: Date())
-            let projectModels: [Project] = (v.projects ?? []).map { p in
-                Project(
-                    id: p.id,
-                    title: p.title,
-                    slug: p.slug,
+            let projectModels: [Project] = (v.projects ?? []).compactMap { p in
+                guard let id = p.id, let title = p.title, let slug = p.slug else { return nil }
+                let status = ProjectStatus(rawValue: p.statusRaw ?? "") ?? .interestCheck
+
+                return Project(
+                    id: id,
+                    title: title,
+                    slug: slug,
                     description: nil,
-                    status: p.status,
+                    status: status,
                     heroImageUrl: p.heroImage,
                     category: nil,
                     categoryId: nil,
