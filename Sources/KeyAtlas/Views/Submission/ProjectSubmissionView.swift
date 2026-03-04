@@ -36,7 +36,7 @@ struct ProjectSubmissionView: View {
         self.projectToEdit = projectToEdit
         _title = State(initialValue: projectToEdit?.title ?? "")
         _slug = State(initialValue: projectToEdit?.slug ?? "")
-        _description = State(initialValue: projectToEdit?.description ?? "")
+        _description = State(initialValue: projectToEdit?.description?.keyAtlasDisplayText ?? "")
         _status = State(initialValue: projectToEdit?.status ?? .interestCheck)
         _categoryId = State(initialValue: projectToEdit?.categoryId ?? "")
         _estimatedDelivery = State(initialValue: projectToEdit?.estimatedDelivery ?? "")
