@@ -6,6 +6,8 @@ import UIKit
 
 struct ProjectSubmissionView: View {
     @Environment(\.dismiss) private var dismiss
+    private let projectToEdit: Project?
+
     @State private var title = ""
     @State private var slug = ""
     @State private var description = ""
@@ -29,6 +31,22 @@ struct ProjectSubmissionView: View {
     @State private var currentSection = 0
 
     private let sections = ["Basic Info", "Details", "Media", "Pricing & Dates"]
+
+    init(projectToEdit: Project? = nil) {
+        self.projectToEdit = projectToEdit
+        _title = State(initialValue: projectToEdit?.title ?? "")
+        _slug = State(initialValue: projectToEdit?.slug ?? "")
+        _description = State(initialValue: projectToEdit?.description ?? "")
+        _status = State(initialValue: projectToEdit?.status ?? .interestCheck)
+        _categoryId = State(initialValue: projectToEdit?.categoryId ?? "")
+        _estimatedDelivery = State(initialValue: projectToEdit?.estimatedDelivery ?? "")
+        if let min = projectToEdit?.pricing?.minPrice {
+            _minPrice = State(initialValue: String(Double(min) / 100.0))
+        }
+        if let max = projectToEdit?.pricing?.maxPrice {
+            _maxPrice = State(initialValue: String(Double(max) / 100.0))
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -64,18 +82,18 @@ struct ProjectSubmissionView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .navigationTitle("Submit Project")
+            .navigationTitle(projectToEdit == nil ? "Submit Project" : "Edit Project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Submit") {
+                    Button(projectToEdit == nil ? "Submit" : "Save") {
                         Task { await submitProject() }
                     }
                     .disabled(title.isEmpty || isSubmitting)
-                    .accessibilityLabel("Submit project")
+                    .accessibilityLabel(projectToEdit == nil ? "Submit project" : "Save project")
                 }
             }
             .task { await loadCategories() }
@@ -318,15 +336,19 @@ struct ProjectSubmissionView: View {
         )
 
         do {
-            try await APIClient.shared.requestVoid(.post, path: "/api/v1/projects", body: body)
+            if let editSlug = projectToEdit?.slug {
+                try await APIClient.shared.requestVoid(.patch, path: "/api/v1/projects/\(editSlug)", body: body)
+            } else {
+                try await APIClient.shared.requestVoid(.post, path: "/api/v1/projects", body: body)
 
-            // Upload gallery images
-            for data in galleryData {
-                _ = try? await APIClient.shared.upload(
-                    path: "/api/v1/projects/\(slug)/gallery",
-                    imageData: data,
-                    filename: "gallery-\(UUID().uuidString).jpg"
-                )
+                // Upload gallery images for new project only
+                for data in galleryData {
+                    _ = try? await APIClient.shared.upload(
+                        path: "/api/v1/projects/\(slug)/gallery",
+                        imageData: data,
+                        filename: "gallery-\(UUID().uuidString).jpg"
+                    )
+                }
             }
 
             dismiss()

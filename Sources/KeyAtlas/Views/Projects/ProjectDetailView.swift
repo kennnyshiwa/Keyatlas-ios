@@ -4,6 +4,7 @@ import SwiftUI
 struct ProjectDetailView: View {
     let slug: String
     @State private var viewModel = ProjectDetailViewModel()
+    @State private var showEditSheet = false
     @Environment(AuthService.self) private var authService
     @Environment(\.openURL) private var openURL
 
@@ -26,9 +27,7 @@ struct ProjectDetailView: View {
                canQuickEdit(project: project) {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        if let url = URL(string: "https://keyatlas.io/projects/submit/\(project.id)/edit") {
-                            openURL(url)
-                        }
+                        showEditSheet = true
                     } label: {
                         Image(systemName: "pencil")
                     }
@@ -37,6 +36,11 @@ struct ProjectDetailView: View {
             }
         }
         .task { await viewModel.loadProject(slug: slug) }
+        .sheet(isPresented: $showEditSheet) {
+            if let project = viewModel.project {
+                ProjectSubmissionView(projectToEdit: project)
+            }
+        }
     }
 
     @ViewBuilder
