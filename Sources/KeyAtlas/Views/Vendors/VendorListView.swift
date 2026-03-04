@@ -22,7 +22,9 @@ struct VendorListView: View {
                 EmptyStateView(title: "No Vendors", message: "No vendors found.", systemImage: "building.2")
             } else {
                 List(filteredVendors) { vendor in
-                    NavigationLink(value: vendor) {
+                    NavigationLink {
+                        VendorDetailView(slug: vendor.slug)
+                    } label: {
                         VendorRow(vendor: vendor)
                     }
                 }
@@ -31,9 +33,6 @@ struct VendorListView: View {
         }
         .searchable(text: $searchText, prompt: "Search vendors")
         .navigationTitle("Vendors")
-        .navigationDestination(for: Vendor.self) { vendor in
-            VendorDetailView(slug: vendor.slug)
-        }
         .refreshable { await viewModel.loadVendors() }
         .task { await viewModel.loadVendors() }
     }

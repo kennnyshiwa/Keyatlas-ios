@@ -35,23 +35,40 @@ final class VendorDetailViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            struct VendorDetailResponse: Codable, Hashable, Sendable {
-                let vendor: Vendor
+            struct VendorPayload: Codable, Hashable, Sendable {
+                let data: VendorData
+            }
+            struct VendorData: Codable, Hashable, Sendable {
+                let id: String
+                let name: String
+                let slug: String
+                let description: String?
+                let logo: String?
+                let storefrontUrl: String?
+                let verified: Bool?
+                let regionsServed: [String]?
                 let projects: [Project]?
             }
-            let response: VendorDetailResponse = try await api.request(path: "/api/v1/vendors/\(slug)")
+
+            let response: VendorPayload = try await api.request(path: "/api/v1/vendors/\(slug)")
+            let v = response.data
+            let mapped = Vendor(
+                id: v.id,
+                name: v.name,
+                slug: v.slug,
+                description: v.description,
+                logoUrl: v.logo,
+                websiteUrl: v.storefrontUrl,
+                regions: v.regionsServed,
+                projectCount: v.projects?.count,
+                createdAt: nil
+            )
             await MainActor.run {
-                self.vendor = response.vendor
-                self.projects = response.projects ?? []
+                self.vendor = mapped
+                self.projects = v.projects ?? []
             }
         } catch {
-            // Try plain vendor object
-            do {
-                let vendor: Vendor = try await api.request(path: "/api/v1/vendors/\(slug)")
-                await MainActor.run { self.vendor = vendor }
-            } catch {
-                await MainActor.run { self.error = error.localizedDescription }
-            }
+            await MainActor.run { self.error = error.localizedDescription }
         }
     }
 }
