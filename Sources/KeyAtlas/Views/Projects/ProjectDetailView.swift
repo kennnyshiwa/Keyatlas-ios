@@ -312,10 +312,22 @@ struct ProjectDetailView: View {
             } else if linkHref.location != NSNotFound {
                 let url = ns.substring(with: linkHref)
                 let labelRaw = linkLabel.location != NSNotFound ? ns.substring(with: linkLabel) : url
-                let label = labelRaw.keyAtlasDisplayText.isEmpty ? url : labelRaw.keyAtlasDisplayText
-                if !url.isEmpty {
-                    segments.append(DescriptionSegment(id: id, kind: .link(label: label, url: url)))
-                    id += 1
+
+                // If the anchor wraps an image, render it as image (common Geekhack pattern)
+                if let imgRegex = try? NSRegularExpression(pattern: #"<img[^>]*src=[\"']([^\"']+)[\"'][^>]*>"#, options: [.caseInsensitive]),
+                   let imgMatch = imgRegex.firstMatch(in: labelRaw, options: [], range: NSRange(location: 0, length: (labelRaw as NSString).length)),
+                   imgMatch.range(at: 1).location != NSNotFound {
+                    let imgURL = (labelRaw as NSString).substring(with: imgMatch.range(at: 1))
+                    if !imgURL.isEmpty {
+                        segments.append(DescriptionSegment(id: id, kind: .image(imgURL)))
+                        id += 1
+                    }
+                } else {
+                    let label = labelRaw.keyAtlasDisplayText.isEmpty ? url : labelRaw.keyAtlasDisplayText
+                    if !url.isEmpty {
+                        segments.append(DescriptionSegment(id: id, kind: .link(label: label, url: url)))
+                        id += 1
+                    }
                 }
             }
 
