@@ -12,10 +12,13 @@ struct ProjectCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Hero image
-            CachedImage(url: project.heroImageUrl)
-                .frame(maxWidth: .infinity)
-                .frame(height: heroHeight)
-                .clipped()
+            GeometryReader { geo in
+                CachedImage(url: project.heroImageUrl)
+                    .frame(width: geo.size.width, height: heroHeight)
+                    .clipped()
+            }
+            .frame(height: heroHeight)
+            .clipped()
 
             VStack(alignment: .leading, spacing: 8) {
                 // Status + Category row
