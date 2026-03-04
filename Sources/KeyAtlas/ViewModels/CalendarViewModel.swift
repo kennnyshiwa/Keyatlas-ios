@@ -7,6 +7,7 @@ final class CalendarViewModel: @unchecked Sendable {
     var isLoading = false
     var error: String?
     var selectedMonth = Date()
+    var selectedDate = Date()
 
     private let api = APIClient.shared
 
@@ -37,7 +38,43 @@ final class CalendarViewModel: @unchecked Sendable {
         }
     }
 
-    private func parseDate(_ string: String) -> Date? {
+    var eventsForSelectedDate: [CalendarEvent] {
+        let calendar = Calendar.current
+        return eventsForSelectedMonth.filter { event in
+            guard let date = parseDate(event.date) else { return false }
+            return calendar.isDate(date, inSameDayAs: selectedDate)
+        }
+        .sorted {
+            (parseDate($0.date) ?? .distantPast) < (parseDate($1.date) ?? .distantPast)
+        }
+    }
+
+    func hasEvents(on day: Date) -> Bool {
+        let calendar = Calendar.current
+        return eventsForSelectedMonth.contains { event in
+            guard let date = parseDate(event.date) else { return false }
+            return calendar.isDate(date, inSameDayAs: day)
+        }
+    }
+
+    func moveMonth(by offset: Int) {
+        let calendar = Calendar.current
+        if let moved = calendar.date(byAdding: .month, value: offset, to: selectedMonth) {
+            selectedMonth = moved
+            let comps = calendar.dateComponents([.year, .month], from: moved)
+            if let first = calendar.date(from: comps) {
+                selectedDate = first
+            }
+        }
+    }
+
+    func monthTitle() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "LLLL yyyy"
+        return f.string(from: selectedMonth)
+    }
+
+    func parseDate(_ string: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
         return formatter.date(from: string)
