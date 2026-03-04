@@ -38,6 +38,23 @@ final class VendorDetailViewModel: @unchecked Sendable {
             struct VendorPayload: Codable, Hashable, Sendable {
                 let data: VendorData
             }
+            struct VendorProjectLite: Codable, Hashable, Sendable {
+                let id: String
+                let title: String
+                let slug: String
+                let status: ProjectStatus
+                let heroImage: String?
+                let createdAt: String?
+                let updatedAt: String?
+
+                enum CodingKeys: String, CodingKey {
+                    case id, title, slug, status
+                    case heroImage = "hero_image_url"
+                    case createdAt = "created_at"
+                    case updatedAt = "updated_at"
+                }
+            }
+
             struct VendorData: Codable, Hashable, Sendable {
                 let id: String
                 let name: String
@@ -47,7 +64,7 @@ final class VendorDetailViewModel: @unchecked Sendable {
                 let storefrontUrl: String?
                 let verified: Bool?
                 let regionsServed: [String]?
-                let projects: [Project]?
+                let projects: [VendorProjectLite]?
             }
 
             let response: VendorPayload = try await api.request(path: "/api/v1/vendors/\(slug)")
@@ -63,9 +80,42 @@ final class VendorDetailViewModel: @unchecked Sendable {
                 projectCount: v.projects?.count,
                 createdAt: nil
             )
+            let nowISO = ISO8601DateFormatter().string(from: Date())
+            let projectModels: [Project] = (v.projects ?? []).map { p in
+                Project(
+                    id: p.id,
+                    title: p.title,
+                    slug: p.slug,
+                    description: nil,
+                    status: p.status,
+                    heroImageUrl: p.heroImage,
+                    category: nil,
+                    categoryId: nil,
+                    designer: nil,
+                    pricing: nil,
+                    vendors: nil,
+                    gallery: nil,
+                    timeline: nil,
+                    updates: nil,
+                    comments: nil,
+                    tags: nil,
+                    links: nil,
+                    estimatedDelivery: nil,
+                    gbStartDate: nil,
+                    gbEndDate: nil,
+                    followCount: nil,
+                    favoriteCount: nil,
+                    isFollowing: nil,
+                    isFavorited: nil,
+                    isFeatured: nil,
+                    createdAt: p.createdAt ?? nowISO,
+                    updatedAt: p.updatedAt ?? nowISO
+                )
+            }
+
             await MainActor.run {
                 self.vendor = mapped
-                self.projects = v.projects ?? []
+                self.projects = projectModels
             }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }

@@ -6,7 +6,9 @@ enum ProjectStatus: String, Codable, CaseIterable, Sendable {
     case groupBuy = "GROUP_BUY"
     case production = "PRODUCTION"
     case shipping = "SHIPPING"
+    case extras = "EXTRAS"
     case completed = "COMPLETED"
+    case archived = "ARCHIVED"
     case cancelled = "CANCELLED"
     case inStock = "IN_STOCK"
 
@@ -16,7 +18,9 @@ enum ProjectStatus: String, Codable, CaseIterable, Sendable {
         case .groupBuy: "Group Buy"
         case .production: "Production"
         case .shipping: "Shipping"
+        case .extras: "Extras"
         case .completed: "Completed"
+        case .archived: "Archived"
         case .cancelled: "Cancelled"
         case .inStock: "In Stock"
         }
@@ -28,7 +32,9 @@ enum ProjectStatus: String, Codable, CaseIterable, Sendable {
         case .groupBuy: "cart"
         case .production: "hammer"
         case .shipping: "shippingbox"
+        case .extras: "bag"
         case .completed: "checkmark.circle"
+        case .archived: "archivebox"
         case .cancelled: "xmark.circle"
         case .inStock: "shippingbox.fill"
         }
@@ -40,10 +46,18 @@ enum ProjectStatus: String, Codable, CaseIterable, Sendable {
         case .groupBuy: "green"
         case .production: "orange"
         case .shipping: "purple"
+        case .extras: "indigo"
         case .completed: "gray"
+        case .archived: "gray"
         case .cancelled: "red"
         case .inStock: "teal"
         }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = ProjectStatus(rawValue: raw) ?? .interestCheck
     }
 }
 

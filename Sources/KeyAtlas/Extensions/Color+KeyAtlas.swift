@@ -11,7 +11,9 @@ extension Color {
         case .groupBuy: .green
         case .production: .orange
         case .shipping: .purple
+        case .extras: .indigo
         case .completed: .gray
+        case .archived: .gray
         case .cancelled: .red
         case .inStock: .teal
         }
