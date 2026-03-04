@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AdminProjectsView: View {
+    @Environment(\.openURL) private var openURL
     @State private var viewModel = AdminProjectsViewModel()
     @State private var showDeleteConfirm = false
     @State private var projectToDelete: AdminProject?
@@ -16,7 +17,11 @@ struct AdminProjectsView: View {
                 EmptyStateView(title: "No Projects", message: "No projects found.", systemImage: "folder")
             } else {
                 List(viewModel.projects) { project in
-                    AdminProjectRow(project: project)
+                    AdminProjectRow(project: project) {
+                        if let url = URL(string: "https://keyatlas.io/projects/submit/\(project.id)/edit") {
+                            openURL(url)
+                        }
+                    }
                         .swipeActions(edge: .leading) {
                             Button {
                                 Task { await viewModel.togglePublish(project) }
@@ -58,36 +63,46 @@ struct AdminProjectsView: View {
 
 private struct AdminProjectRow: View {
     let project: AdminProject
+    var onEdit: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            CachedImage(url: project.heroImage)
-                .frame(width: 60, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+        Button(action: onEdit) {
+            HStack(spacing: 12) {
+                CachedImage(url: project.heroImage)
+                    .frame(width: 60, height: 40)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(project.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-                HStack(spacing: 6) {
-                    Text(project.status.replacingOccurrences(of: "_", with: " "))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Circle()
-                        .fill(project.published ? .green : .orange)
-                        .frame(width: 6, height: 6)
-                    Text(project.published ? "Published" : "Draft")
-                        .font(.caption2)
-                        .foregroundStyle(project.published ? .green : .orange)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(project.title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(project.status.replacingOccurrences(of: "_", with: " "))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Circle()
+                            .fill(project.published ? .green : .orange)
+                            .frame(width: 6, height: 6)
+                        Text(project.published ? "Published" : "Draft")
+                            .font(.caption2)
+                            .foregroundStyle(project.published ? .green : .orange)
+                    }
+                    if let creator = project.creator {
+                        Text("by \(creator.username ?? "unknown")")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
-                if let creator = project.creator {
-                    Text("by \(creator.username ?? "unknown")")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+
+                Spacer()
+                Image(systemName: "pencil")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.vertical, 2)
     }
 }

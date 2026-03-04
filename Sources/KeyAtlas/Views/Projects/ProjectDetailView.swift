@@ -4,6 +4,7 @@ import SwiftUI
 struct ProjectDetailView: View {
     let slug: String
     @State private var viewModel = ProjectDetailViewModel()
+    @Environment(AuthService.self) private var authService
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -20,6 +21,21 @@ struct ProjectDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let project = viewModel.project,
+               canQuickEdit(project: project) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        if let url = URL(string: "https://keyatlas.io/projects/submit/\(project.id)/edit") {
+                            openURL(url)
+                        }
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .accessibilityLabel("Quick edit project")
+                }
+            }
+        }
         .task { await viewModel.loadProject(slug: slug) }
     }
 
@@ -89,6 +105,11 @@ struct ProjectDetailView: View {
                     // Timeline
                     if let timeline = project.timeline, !timeline.isEmpty {
                         timelineSection(timeline)
+                    }
+
+                    // Updates
+                    if let updates = project.updates, !updates.isEmpty {
+                        updatesSection(updates)
                     }
 
                     // Links
@@ -353,6 +374,35 @@ struct ProjectDetailView: View {
                 }
             }
         }
+    }
+
+    private func updatesSection(_ updates: [ProjectUpdate]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Updates")
+                .font(.headline)
+            ForEach(updates) { update in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(update.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(update.content.keyAtlasDisplayText)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(update.createdAt.relativeTime)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.vertical, 6)
+                Divider()
+            }
+        }
+    }
+
+    private func canQuickEdit(project: Project) -> Bool {
+        guard let me = authService.currentUser?.id,
+              let owner = project.designer?.id else { return false }
+        return me == owner
     }
 
     // MARK: - Links

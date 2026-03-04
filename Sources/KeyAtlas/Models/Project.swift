@@ -128,6 +128,19 @@ struct ProjectVendor: Codable, Identifiable, Hashable, Sendable {
     let region: String?
 }
 
+/// Project update
+struct ProjectUpdate: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String
+    let content: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, content
+        case createdAt = "created_at"
+    }
+}
+
 /// Comment on a project
 struct Comment: Codable, Identifiable, Hashable, Sendable {
     let id: String
@@ -158,6 +171,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let vendors: [ProjectVendor]?
     let gallery: [GalleryImage]?
     let timeline: [TimelineEntry]?
+    let updates: [ProjectUpdate]?
     let comments: [Comment]?
     let tags: [String]?
     let links: [ProjectLink]?
@@ -173,7 +187,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, title, slug, description, status, category, tags, links, vendors, gallery, timeline, comments, designer, pricing
+        case id, title, slug, description, status, category, tags, links, vendors, gallery, timeline, updates, comments, designer, pricing
         case heroImageUrl = "hero_image_url"
         case categoryId = "category_id"
         case estimatedDelivery = "estimated_delivery"
