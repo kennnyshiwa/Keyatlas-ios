@@ -12,32 +12,30 @@ struct VendorListView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if viewModel.isLoading && viewModel.vendors.isEmpty {
-                    ProgressView("Loading vendors…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = viewModel.error, viewModel.vendors.isEmpty {
-                    ErrorView(message: error) { await viewModel.loadVendors() }
-                } else if filteredVendors.isEmpty {
-                    EmptyStateView(title: "No Vendors", message: "No vendors found.", systemImage: "building.2")
-                } else {
-                    List(filteredVendors) { vendor in
-                        NavigationLink(value: vendor) {
-                            VendorRow(vendor: vendor)
-                        }
+        Group {
+            if viewModel.isLoading && viewModel.vendors.isEmpty {
+                ProgressView("Loading vendors…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = viewModel.error, viewModel.vendors.isEmpty {
+                ErrorView(message: error) { await viewModel.loadVendors() }
+            } else if filteredVendors.isEmpty {
+                EmptyStateView(title: "No Vendors", message: "No vendors found.", systemImage: "building.2")
+            } else {
+                List(filteredVendors) { vendor in
+                    NavigationLink(value: vendor) {
+                        VendorRow(vendor: vendor)
                     }
-                    .listStyle(.plain)
                 }
+                .listStyle(.plain)
             }
-            .searchable(text: $searchText, prompt: "Search vendors")
-            .navigationTitle("Vendors")
-            .navigationDestination(for: Vendor.self) { vendor in
-                VendorDetailView(slug: vendor.slug)
-            }
-            .refreshable { await viewModel.loadVendors() }
-            .task { await viewModel.loadVendors() }
         }
+        .searchable(text: $searchText, prompt: "Search vendors")
+        .navigationTitle("Vendors")
+        .navigationDestination(for: Vendor.self) { vendor in
+            VendorDetailView(slug: vendor.slug)
+        }
+        .refreshable { await viewModel.loadVendors() }
+        .task { await viewModel.loadVendors() }
     }
 }
 

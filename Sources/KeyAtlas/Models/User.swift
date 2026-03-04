@@ -7,11 +7,14 @@ struct UserSummary: Codable, Identifiable, Hashable, Sendable {
     let name: String?
     let avatarUrl: String?
     let image: String?
+    let role: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, username, name, image
+        case id, username, name, image, role
         case avatarUrl = "avatar_url"
     }
+
+    var isAdmin: Bool { role == "ADMIN" }
 
     var displayName: String {
         username ?? name ?? "Unknown"
@@ -31,6 +34,7 @@ struct UserProfile: Codable, Identifiable, Hashable, Sendable {
     let bio: String?
     let avatarUrl: String?
     let image: String?
+    let role: String?
     let projects: [Project]?
     let followerCount: Int?
     let followingCount: Int?
@@ -38,13 +42,15 @@ struct UserProfile: Codable, Identifiable, Hashable, Sendable {
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, username, name, email, bio, image, projects
+        case id, username, name, email, bio, image, role, projects
         case avatarUrl = "avatar_url"
         case followerCount = "follower_count"
         case followingCount = "following_count"
         case isFollowing = "is_following"
         case createdAt = "created_at"
     }
+
+    var isAdmin: Bool { role == "ADMIN" }
 
     var displayName: String {
         username ?? name ?? "Unknown"

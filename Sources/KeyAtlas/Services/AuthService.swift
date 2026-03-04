@@ -28,7 +28,8 @@ final class AuthService: @unchecked Sendable {
                     username: profile.username,
                     name: profile.name,
                     avatarUrl: profile.image,
-                    image: profile.image
+                    image: profile.image,
+                    role: profile.role
                 )
             }
         } catch {
@@ -135,7 +136,8 @@ final class AuthService: @unchecked Sendable {
                     username: profile.username,
                     name: profile.name,
                     avatarUrl: profile.image,
-                    image: profile.image
+                    image: profile.image,
+                    role: profile.role
                 )
             }
         } catch {

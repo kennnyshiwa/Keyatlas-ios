@@ -118,6 +118,30 @@ struct ProfileTabView: View {
                 }
                 .padding()
 
+                // Admin section
+                if authService.currentUser?.isAdmin == true {
+                    NavigationLink {
+                        AdminDashboardView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "shield.checkered")
+                                .font(.title3)
+                                .foregroundStyle(.red)
+                            Text("Admin Panel")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding()
+                        .cardStyle()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                }
+
                 // User's projects
                 if let projects = profile.projects, !projects.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {

@@ -5,8 +5,7 @@ struct StatisticsView: View {
     @State private var viewModel = StatisticsViewModel()
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 if viewModel.isLoading {
                     ProgressView("Loading statistics…")
                         .frame(maxWidth: .infinity)
@@ -99,10 +98,9 @@ struct StatisticsView: View {
                     .padding()
                 }
             }
-            .navigationTitle("Statistics")
-            .refreshable { await viewModel.loadStatistics() }
-            .task { await viewModel.loadStatistics() }
-        }
+        .navigationTitle("Statistics")
+        .refreshable { await viewModel.loadStatistics() }
+        .task { await viewModel.loadStatistics() }
     }
 
     // MARK: - Summary cards

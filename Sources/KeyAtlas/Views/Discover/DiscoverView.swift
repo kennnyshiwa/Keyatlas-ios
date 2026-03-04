@@ -34,6 +34,41 @@ struct DiscoverView: View {
                         if !viewModel.interestChecks.isEmpty {
                             projectSection(title: "Interest Checks", icon: "lightbulb", projects: viewModel.interestChecks)
                         }
+
+                        Divider().padding(.horizontal)
+
+                        // Explore More
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Explore More", systemImage: "compass")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .padding(.horizontal)
+
+                            VStack(spacing: 0) {
+                                NavigationLink {
+                                    VendorListView()
+                                } label: {
+                                    discoverLink(title: "Vendors", icon: "building.2", subtitle: "Browse keyboard vendors")
+                                }
+
+                                Divider().padding(.leading, 56)
+
+                                NavigationLink {
+                                    GuideListView()
+                                } label: {
+                                    discoverLink(title: "Guides", icon: "book", subtitle: "Build guides & tutorials")
+                                }
+
+                                Divider().padding(.leading, 56)
+
+                                NavigationLink {
+                                    StatisticsView()
+                                } label: {
+                                    discoverLink(title: "Statistics", icon: "chart.bar", subtitle: "Community stats & trends")
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
                     }
                     .padding(.vertical)
                 }
@@ -45,6 +80,28 @@ struct DiscoverView: View {
             }
             .task { await viewModel.loadAll() }
         }
+    }
+
+    private func discoverLink(title: String, icon: String, subtitle: String) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(.blue)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 10)
     }
 
     private func projectSection(title: String, icon: String, projects: [Project]) -> some View {

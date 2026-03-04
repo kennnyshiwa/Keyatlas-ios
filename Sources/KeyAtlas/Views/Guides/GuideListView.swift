@@ -4,8 +4,7 @@ struct GuideListView: View {
     @State private var viewModel = GuideViewModel()
 
     var body: some View {
-        NavigationStack {
-            Group {
+        Group {
                 if viewModel.isLoading && viewModel.guides.isEmpty {
                     ProgressView("Loading guides…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -51,9 +50,8 @@ struct GuideListView: View {
                     .listStyle(.plain)
                 }
             }
-            .navigationTitle("Build Guides")
-            .refreshable { await viewModel.loadGuides() }
-            .task { await viewModel.loadGuides() }
-        }
+        .navigationTitle("Build Guides")
+        .refreshable { await viewModel.loadGuides() }
+        .task { await viewModel.loadGuides() }
     }
 }

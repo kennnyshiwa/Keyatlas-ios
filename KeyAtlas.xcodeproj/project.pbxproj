@@ -8,17 +8,21 @@
 
 /* Begin PBXBuildFile section */
 		02DD598C03B5BF9991D5285E /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = C579565FCB7D52EC70C0E03A /* Notification.swift */; };
+		05227F55A2FF14605CCD7185 /* AdminUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A8FA353C73396718E85949 /* AdminUsersView.swift */; };
 		07017F279B4B42EF277CFB48 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3C702BB3B0069FFCF50BA8 /* ProfileView.swift */; };
 		0C34A6562FF0B8F8D54AE718 /* GuideDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A61E73588C8B9A873066EB81 /* GuideDetailView.swift */; };
 		15DC321E8FD53F62A75DFD1A /* VendorListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4CEFA517DA58CDFE8170DD /* VendorListView.swift */; };
 		16DAE093CA8E424CED939D07 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B13838D6A1EDB9064C0AFB /* CalendarView.swift */; };
+		1B81D417635F974E145EF96D /* AdminProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66344143B803A25812B838E /* AdminProjectsView.swift */; };
 		1D52CD4AFAE2D615C535EEAB /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = 829B8275C18D45A9E5490D41 /* Nuke */; };
 		1E7B52146EE048F1D751CEB7 /* ProjectListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F3C602549FCEA776630055E /* ProjectListViewModel.swift */; };
+		2271099B5C4E0D707568AC8E /* AdminReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AA8CC5C5FEE4B8B7166C491 /* AdminReportsView.swift */; };
 		230022A639355A6F28321148 /* ThreadDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96A0BA3B56244928F5987EB8 /* ThreadDetailView.swift */; };
 		2AC4CE4954090294921DBAFB /* GuideViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705AEB7CA1B6F216EA5BAB2C /* GuideViewModel.swift */; };
 		33CAADBFAF3A62A4C9E41251 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0097AD97F8DC54BDE6B1E416 /* DiscoverView.swift */; };
 		3767B382068DDBEBE9917EBC /* StatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3C9B57488F15EB6F599E2F /* StatisticsView.swift */; };
 		446D1969C5328126311FE5CF /* ImageGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346298F7E9A15AACE06F2847 /* ImageGallery.swift */; };
+		45CD52DF060BD11898A438B6 /* AdminViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE6A71E36E2A4AAC48CEB59 /* AdminViewModel.swift */; };
 		5104E8AEC95CC7DAFFCCA54F /* Statistics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F95D3C1938DF064933FC090C /* Statistics.swift */; };
 		584A3F230332D7106DE488E2 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EBAC9127047EF4FB3E9B6AC /* ProjectDetailView.swift */; };
 		5DCDA2E8F3AFED86018D3EA1 /* Guide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D387F865055E7E5E39C1043 /* Guide.swift */; };
@@ -47,6 +51,7 @@
 		AC2AC2A1765067C45E69FF57 /* StatisticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF631879EFEF52E5F6439694 /* StatisticsViewModel.swift */; };
 		B3DFCDA2D9BD642F3CECD644 /* VendorDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C7EC57685232F1D833FE7CC /* VendorDetailView.swift */; };
 		B994361BD938C3420D4B8FFE /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FF9CB72BE842CA9AE6BF1C /* AuthService.swift */; };
+		B9FF621797C59635E3768117 /* AdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B108EC01B5AA9F2F334F484 /* AdminDashboardView.swift */; };
 		BF5E42BD7889705BB8B75DF0 /* GuideListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE87B14DF9FF9F9478C04330 /* GuideListView.swift */; };
 		C14A5727BDD6BE0167D3B9E4 /* ProjectDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFEC2563E62DCEAAE151939 /* ProjectDetailViewModel.swift */; };
 		C23F6FBE0EE2F9CE0736DE03 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46A1341F407674FD01052067 /* SearchViewModel.swift */; };
@@ -82,11 +87,14 @@
 		3A3C702BB3B0069FFCF50BA8 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		46A1341F407674FD01052067 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		4A4CEFA517DA58CDFE8170DD /* VendorListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VendorListView.swift; sourceTree = "<group>"; };
+		4AA8CC5C5FEE4B8B7166C491 /* AdminReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminReportsView.swift; sourceTree = "<group>"; };
 		4FA05D651BEC8240A6E46B96 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		4FFEC2563E62DCEAAE151939 /* ProjectDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailViewModel.swift; sourceTree = "<group>"; };
 		5C7EC57685232F1D833FE7CC /* VendorDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VendorDetailView.swift; sourceTree = "<group>"; };
 		623282680FC5F95C82F13684 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		6484DD4CB25F8F34E3E6D890 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
+		68A8FA353C73396718E85949 /* AdminUsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminUsersView.swift; sourceTree = "<group>"; };
+		6B108EC01B5AA9F2F334F484 /* AdminDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboardView.swift; sourceTree = "<group>"; };
 		705AEB7CA1B6F216EA5BAB2C /* GuideViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideViewModel.swift; sourceTree = "<group>"; };
 		72B13838D6A1EDB9064C0AFB /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
 		79473D80B7756A1E0ECF3C9A /* ProjectSubmissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSubmissionView.swift; sourceTree = "<group>"; };
@@ -110,11 +118,13 @@
 		C20B8612719063657F42FE0A /* ForumViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumViewModel.swift; sourceTree = "<group>"; };
 		C579565FCB7D52EC70C0E03A /* Notification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notification.swift; sourceTree = "<group>"; };
 		CCD9E5BDAAE655A03F8D28B3 /* Forum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Forum.swift; sourceTree = "<group>"; };
+		CEE6A71E36E2A4AAC48CEB59 /* AdminViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViewModel.swift; sourceTree = "<group>"; };
 		DF631879EFEF52E5F6439694 /* StatisticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsViewModel.swift; sourceTree = "<group>"; };
 		E66F213CED64A05F03CA294A /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		EE87B14DF9FF9F9478C04330 /* GuideListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideListView.swift; sourceTree = "<group>"; };
 		F18D936D20D2E5914903978E /* KeyAtlas.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KeyAtlas.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1FF9CB72BE842CA9AE6BF1C /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		F66344143B803A25812B838E /* AdminProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminProjectsView.swift; sourceTree = "<group>"; };
 		F95D3C1938DF064933FC090C /* Statistics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Statistics.swift; sourceTree = "<group>"; };
 		FABC823F2CCB2E1D2851FC95 /* ProjectListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -241,6 +251,17 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		7714D9A1B08547163215E227 /* Admin */ = {
+			isa = PBXGroup;
+			children = (
+				6B108EC01B5AA9F2F334F484 /* AdminDashboardView.swift */,
+				F66344143B803A25812B838E /* AdminProjectsView.swift */,
+				4AA8CC5C5FEE4B8B7166C491 /* AdminReportsView.swift */,
+				68A8FA353C73396718E85949 /* AdminUsersView.swift */,
+			);
+			path = Admin;
+			sourceTree = "<group>";
+		};
 		78F1C8CAFCDCC347F7A9D35F /* Discover */ = {
 			isa = PBXGroup;
 			children = (
@@ -252,6 +273,7 @@
 		8F6672B11A61FB36ABD47C67 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				CEE6A71E36E2A4AAC48CEB59 /* AdminViewModel.swift */,
 				79EFBB49B6A1B129B5A24F0A /* CalendarViewModel.swift */,
 				9549DCDD9955A37DF28E7171 /* DiscoverViewModel.swift */,
 				C20B8612719063657F42FE0A /* ForumViewModel.swift */,
@@ -269,6 +291,7 @@
 		B350B3B55B1012EF914E0E03 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				7714D9A1B08547163215E227 /* Admin */,
 				1E69F0BC6F8C98116CF51473 /* Auth */,
 				21745D5547DA0179D0002EC8 /* Calendar */,
 				78F1C8CAFCDCC347F7A9D35F /* Discover */,
@@ -433,6 +456,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				A530316126DDD31567DB1EC6 /* APIClient.swift in Sources */,
+				B9FF621797C59635E3768117 /* AdminDashboardView.swift in Sources */,
+				1B81D417635F974E145EF96D /* AdminProjectsView.swift in Sources */,
+				2271099B5C4E0D707568AC8E /* AdminReportsView.swift in Sources */,
+				05227F55A2FF14605CCD7185 /* AdminUsersView.swift in Sources */,
+				45CD52DF060BD11898A438B6 /* AdminViewModel.swift in Sources */,
 				B994361BD938C3420D4B8FFE /* AuthService.swift in Sources */,
 				9296FB20F1AFDF2AF9C31B2A /* CachedImage.swift in Sources */,
 				E7350B111F478B2A54224B15 /* CalendarEvent.swift in Sources */,
