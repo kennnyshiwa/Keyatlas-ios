@@ -13,7 +13,13 @@ extension String {
             var html = trimmed
             // Preserve breaks for common block tags before attributed conversion
             html = html.replacingOccurrences(of: #"(?i)<br\s*/?>"#, with: "\n", options: .regularExpression)
-            html = html.replacingOccurrences(of: #"(?i)</(p|div|li|h[1-6]|section|article|blockquote)>"#, with: "\n", options: .regularExpression)
+            html = html.replacingOccurrences(of: #"(?i)</(p|div|li|h[1-6]|section|article|blockquote|tr)>"#, with: "\n", options: .regularExpression)
+            html = html.replacingOccurrences(of: #"(?i)<(p|div|li|h[1-6]|section|article|blockquote|tr)[^>]*>"#, with: "\n", options: .regularExpression)
+
+            let fallbackPlain = html
+                .replacingOccurrences(of: #"<script[\s\S]*?</script>"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"<style[\s\S]*?</style>"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"<[^>]+>"#, with: " ", options: .regularExpression)
 
             if let data = html.data(using: .utf8),
                let attributed = try? NSAttributedString(
@@ -25,13 +31,16 @@ extension String {
                 documentAttributes: nil
                ) {
                 output = attributed.string
+
+                // If attributed parsing collapses too aggressively, use fallback with preserved breaks
+                let attributedNewlines = output.filter { $0 == "\n" }.count
+                let fallbackNewlines = fallbackPlain.filter { $0 == "\n" }.count
+                if fallbackNewlines > attributedNewlines {
+                    output = fallbackPlain
+                }
             } else {
-                // Hard fallback: strip tags if rich parsing fails
-                output = html.replacingOccurrences(
-                    of: #"<[^>]+>"#,
-                    with: " ",
-                    options: .regularExpression
-                )
+                // Hard fallback: strip tags while keeping inserted newlines above
+                output = fallbackPlain
             }
         }
 
