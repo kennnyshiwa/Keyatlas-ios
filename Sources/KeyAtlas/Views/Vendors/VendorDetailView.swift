@@ -61,13 +61,30 @@ struct VendorDetailView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
+                        } else {
+                            ContentUnavailableView {
+                                Label("No projects yet", systemImage: "shippingbox")
+                            } description: {
+                                Text("This vendor currently has no published projects.")
+                            }
                         }
                     }
                     .padding()
                 }
+            } else {
+                ContentUnavailableView {
+                    Label("Vendor unavailable", systemImage: "building.2")
+                } description: {
+                    Text("Vendor detail did not load.")
+                } actions: {
+                    Button("Try Again") {
+                        Task { await viewModel.loadVendor(slug: slug) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .task { await viewModel.loadVendor(slug: slug) }
+        .task(id: slug) { await viewModel.loadVendor(slug: slug) }
     }
 }
