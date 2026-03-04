@@ -8,60 +8,32 @@ extension String {
 
         var output = trimmed
 
-        // 1) HTML -> plain text when needed (preserve visual line breaks)
+        // 1) HTML -> plain text when needed (fully deterministic line-break preserving path)
         if trimmed.contains("<") && trimmed.contains(">") {
-            var html = trimmed
-            // Preserve breaks for common block tags before attributed conversion
-            html = html.replacingOccurrences(of: #"(?i)<br\s*/?>"#, with: "\n", options: .regularExpression)
-            html = html.replacingOccurrences(of: #"(?i)</(p|div|li|h[1-6]|section|article|blockquote|tr)>"#, with: "\n", options: .regularExpression)
-            html = html.replacingOccurrences(of: #"(?i)<(p|div|li|h[1-6]|section|article|blockquote|tr)[^>]*>"#, with: "\n", options: .regularExpression)
-
-            let fallbackPlain = html
-                .replacingOccurrences(of: #"<script[\s\S]*?</script>"#, with: "", options: .regularExpression)
-                .replacingOccurrences(of: #"<style[\s\S]*?</style>"#, with: "", options: .regularExpression)
+            output = trimmed
+                .replacingOccurrences(of: #"(?is)<script[\s\S]*?</script>"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"(?is)<style[\s\S]*?</style>"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"(?i)<br\s*/?>"#, with: "\n", options: .regularExpression)
+                .replacingOccurrences(of: #"(?i)</(p|div|li|h[1-6]|section|article|blockquote|tr|ul|ol)>"#, with: "\n", options: .regularExpression)
+                .replacingOccurrences(of: #"(?i)<li[^>]*>"#, with: "\n• ", options: .regularExpression)
+                .replacingOccurrences(of: #"(?i)<(p|div|h[1-6]|section|article|blockquote|tr|ul|ol)[^>]*>"#, with: "\n", options: .regularExpression)
+                .replacingOccurrences(of: #"(?i)</td>"#, with: "  ", options: .regularExpression)
                 .replacingOccurrences(of: #"<[^>]+>"#, with: " ", options: .regularExpression)
-
-            if let data = html.data(using: .utf8),
-               let attributed = try? NSAttributedString(
-                data: data,
-                options: [
-                    .documentType: NSAttributedString.DocumentType.html,
-                    .characterEncoding: String.Encoding.utf8.rawValue,
-                ],
-                documentAttributes: nil
-               ) {
-                output = attributed.string
-
-                // If attributed parsing collapses too aggressively, use fallback with preserved breaks
-                let attributedNewlines = output.filter { $0 == "\n" }.count
-                let fallbackNewlines = fallbackPlain.filter { $0 == "\n" }.count
-                if fallbackNewlines > attributedNewlines {
-                    output = fallbackPlain
-                }
-            } else {
-                // Hard fallback: strip tags while keeping inserted newlines above
-                output = fallbackPlain
-            }
         }
 
-        // 2) Decode common HTML entities if still present
-        if output.contains("&") {
-            let wrapped = "<span>\(output)</span>"
-            if let data = wrapped.data(using: .utf8),
-               let attributed = try? NSAttributedString(
-                data: data,
-                options: [
-                    .documentType: NSAttributedString.DocumentType.html,
-                    .characterEncoding: String.Encoding.utf8.rawValue,
-                ],
-                documentAttributes: nil
-               ) {
-                output = attributed.string
-            }
-        }
+        // 2) Decode common HTML entities (without re-parsing as HTML)
+        output = output.keyAtlasDecodingHTMLEntities()
 
         // 3) Fix common mojibake apostrophes seen in imported content
-        output = output.replacingOccurrences(of: "�", with: "'")
+        output = output
+            .replacingOccurrences(of: "�", with: "'")
+            .replacingOccurrences(of: "â€™", with: "’")
+            .replacingOccurrences(of: "â€˜", with: "‘")
+            .replacingOccurrences(of: "â€œ", with: "“")
+            .replacingOccurrences(of: "â€", with: "”")
+            .replacingOccurrences(of: "â€“", with: "–")
+            .replacingOccurrences(of: "â€”", with: "—")
+            .replacingOccurrences(of: "â€¦", with: "…")
 
         // 4) Insert safe breakpoints for long unbroken runs (causes horizontal overflow on iOS)
         output = output.keyAtlasSoftWrappedLongRuns(limit: 32)
@@ -108,6 +80,31 @@ extension String {
 }
 
 private extension String {
+    func keyAtlasDecodingHTMLEntities() -> String {
+        var out = self
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&apos;", with: "'")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+
+        // numeric entities: decimal
+        if let dec = try? NSRegularExpression(pattern: "&#(\\d+);", options: []) {
+            let ns = out as NSString
+            let matches = dec.matches(in: out, options: [], range: NSRange(location: 0, length: ns.length)).reversed()
+            for m in matches {
+                let raw = ns.substring(with: m.range(at: 1))
+                if let code = Int(raw), let scalar = UnicodeScalar(code) {
+                    out = (out as NSString).replacingCharacters(in: m.range(at: 0), with: String(Character(scalar)))
+                }
+            }
+        }
+
+        return out
+    }
+
     func chunkedWithZeroWidthSpace(every size: Int) -> String {
         guard size > 0, count > size else { return self }
         var out = ""
