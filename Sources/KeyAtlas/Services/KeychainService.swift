@@ -9,6 +9,7 @@ enum KeychainService: Sendable {
         case authToken = "auth_token"
         case refreshToken = "refresh_token"
         case sessionCookie = "session_cookie"
+        case pushToken = "push_token"
     }
 
     static func save(_ value: String, for key: Key) throws {

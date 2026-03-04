@@ -32,6 +32,7 @@ final class AuthService: @unchecked Sendable {
                     role: profile.role
                 )
             }
+            await PushNotificationService.shared.syncTokenIfPossible()
         } catch {
             // Try NextAuth session as fallback
             do {
@@ -140,6 +141,7 @@ final class AuthService: @unchecked Sendable {
                     role: profile.role
                 )
             }
+            await PushNotificationService.shared.syncTokenIfPossible()
         } catch {
             // Keep token but surface error so UI can retry/sign out
             throw error
@@ -148,6 +150,7 @@ final class AuthService: @unchecked Sendable {
 
     /// Sign out and clear stored credentials
     func signOut() async {
+        await PushNotificationService.shared.unregisterCurrentToken()
         // Try to call server sign-out
         try? await api.requestVoid(.post, path: "/api/auth/signout", authenticated: true)
         KeychainService.clearAll()
