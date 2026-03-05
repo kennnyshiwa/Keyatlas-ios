@@ -59,6 +59,12 @@ struct AdminDashboardView: View {
                         } label: {
                             adminLink(title: "View Reports", icon: "exclamationmark.triangle")
                         }
+                        Divider().padding(.leading, 48)
+                        NavigationLink {
+                            AdminAuditLogsView()
+                        } label: {
+                            adminLink(title: "Audit Logs", icon: "checklist")
+                        }
                     }
                     .padding()
                     .cardStyle()
@@ -101,5 +107,49 @@ struct AdminDashboardView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 8)
+    }
+}
+
+struct AdminAuditLogsView: View {
+    @State private var viewModel = AdminAuditLogsViewModel()
+
+    var body: some View {
+        Group {
+            if viewModel.isLoading && viewModel.logs.isEmpty {
+                ProgressView("Loading audit logs…")
+            } else if let error = viewModel.error, viewModel.logs.isEmpty {
+                ErrorView(message: error) { await viewModel.load() }
+            } else {
+                List(viewModel.logs) { log in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(log.action)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Text(log.actorRole)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text(log.actor.displayName ?? log.actor.username ?? log.actor.email ?? log.actorId)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("\(log.resource)\(log.resourceId.map { " (\($0))" } ?? "")")
+                            .font(.caption)
+
+                        Text(log.createdAt)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listStyle(.plain)
+            }
+        }
+        .navigationTitle("Audit Logs")
+        .refreshable { await viewModel.load() }
+        .task { await viewModel.load() }
     }
 }

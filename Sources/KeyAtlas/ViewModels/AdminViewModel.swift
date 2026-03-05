@@ -68,6 +68,28 @@ struct AdminReportUser: Codable, Hashable, Sendable {
     let username: String?
 }
 
+struct AdminAuditActor: Codable, Hashable, Sendable {
+    let id: String
+    let username: String?
+    let displayName: String?
+    let email: String?
+}
+
+struct AdminAuditLog: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let actorId: String
+    let actorRole: String
+    let action: String
+    let resource: String
+    let resourceId: String?
+    let targetId: String?
+    let metadata: String?
+    let ipAddress: String?
+    let userAgent: String?
+    let createdAt: String
+    let actor: AdminAuditActor
+}
+
 // MARK: - ViewModels
 
 @Observable
@@ -188,6 +210,29 @@ final class AdminUsersViewModel: @unchecked Sendable {
                 authenticated: true
             )
             await load()
+        } catch {
+            await MainActor.run { self.error = error.localizedDescription }
+        }
+    }
+}
+
+@Observable
+final class AdminAuditLogsViewModel: @unchecked Sendable {
+    var logs: [AdminAuditLog] = []
+    var isLoading = false
+    var error: String?
+
+    private let api = APIClient.shared
+
+    func load() async {
+        await MainActor.run { self.isLoading = true; self.error = nil }
+        defer { Task { @MainActor in self.isLoading = false } }
+
+        do {
+            let response: PaginatedResponse<AdminAuditLog> = try await api.request(
+                path: "/api/v1/admin/audit-logs", authenticated: true
+            )
+            await MainActor.run { self.logs = response.data }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }
