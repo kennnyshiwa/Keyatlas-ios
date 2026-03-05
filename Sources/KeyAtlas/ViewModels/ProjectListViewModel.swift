@@ -3,15 +3,21 @@ import Foundation
 enum ProjectSortOption: String, CaseIterable, Sendable {
     case newest = "newest"
     case oldest = "oldest"
+    case gbNewest = "gb-newest"
+    case gbOldest = "gb-oldest"
+    case gbEnding = "gb-ending"
     case az = "a-z"
     case za = "z-a"
-    case mostFollowed = "most_followed"
-    case recentlyUpdated = "recently_updated"
+    case mostFollowed = "most-followed"
+    case recentlyUpdated = "updated"
 
     var displayName: String {
         switch self {
         case .newest: "Newest"
         case .oldest: "Oldest"
+        case .gbNewest: "GB Date (Newest)"
+        case .gbOldest: "GB Date (Oldest)"
+        case .gbEnding: "GB Ending Soon"
         case .az: "A → Z"
         case .za: "Z → A"
         case .mostFollowed: "Most Followed"
