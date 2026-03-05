@@ -25,7 +25,7 @@ final class ProjectDetailViewModel: @unchecked Sendable {
         do {
             let response: APIDataResponse<Project> = try await api.request(
                 path: "/api/v1/projects/\(safeSlug)",
-                authenticated: false
+                authenticated: true
             )
             await MainActor.run { self.project = response.data }
         } catch {
