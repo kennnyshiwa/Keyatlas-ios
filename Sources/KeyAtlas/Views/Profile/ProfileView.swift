@@ -44,10 +44,18 @@ private struct ProfileProjectRow: View {
     }
 }
 
+enum ProfileSection: String, CaseIterable {
+    case projects = "Projects"
+    case favorites = "Favorites"
+    case collection = "Collection"
+    case notifications = "Notifications"
+}
+
 struct ProfileTabView: View {
     @Environment(AuthService.self) private var authService
     @State private var viewModel = ProfileViewModel()
     @State private var showSettings = false
+    @State private var selectedSection: ProfileSection = .projects
 
     var body: some View {
         NavigationStack {
@@ -62,7 +70,6 @@ struct ProfileTabView: View {
                 } else if let error = viewModel.error {
                     ErrorView(message: error) { await viewModel.loadCurrentProfile() }
                 } else {
-                    // Authenticated but no profile loaded yet
                     ProgressView()
                 }
             }
@@ -95,159 +102,233 @@ struct ProfileTabView: View {
 
     @ViewBuilder
     private func profileContent(_ profile: UserProfile) -> some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Avatar + info
-                VStack(spacing: 12) {
-                    AvatarImage(url: profile.effectiveAvatarUrl, size: 80)
+        VStack(spacing: 0) {
+            // Header (non-scrolling)
+            VStack(spacing: 12) {
+                AvatarImage(url: profile.effectiveAvatarUrl, size: 80)
 
-                    Text(profile.displayName)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                Text(profile.displayName)
+                    .font(.title2)
+                    .fontWeight(.bold)
 
-                    if let bio = profile.bio, !bio.isEmpty {
-                        Text(bio)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    // Stats row
-                    HStack(spacing: 32) {
-                        statItem(label: "Followers", count: profile.followerCount ?? 0)
-                        statItem(label: "Following", count: profile.followingCount ?? 0)
-                        statItem(label: "Projects", count: profile.projects?.count ?? 0)
-                    }
-                }
-                .padding()
-
-                // Admin section
-                if authService.currentUser?.isAdmin == true {
-                    NavigationLink {
-                        AdminDashboardView()
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "shield.checkered")
-                                .font(.title3)
-                                .foregroundStyle(.red)
-                            Text("Admin Panel")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        .padding()
-                        .cardStyle()
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal)
+                if let bio = profile.bio, !bio.isEmpty {
+                    Text(bio)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
 
-                // User's projects
-                if let projects = profile.projects, !projects.isEmpty {
-                    profileProjectSection(title: "Projects", projects: projects)
+                HStack(spacing: 32) {
+                    statItem(label: "Followers", count: profile.followerCount ?? 0)
+                    statItem(label: "Following", count: profile.followingCount ?? 0)
+                    statItem(label: "Projects", count: profile.projects?.count ?? 0)
                 }
+            }
+            .padding()
 
-                // Favorites
-                if !viewModel.favorites.isEmpty {
-                    profileProjectSection(title: "Favorites", projects: viewModel.favorites)
-                }
-
-                // Collection
-                if !viewModel.collection.isEmpty {
-                    profileProjectSection(title: "Collection", projects: viewModel.collection)
-                }
-
-                // Activity
-                NavigationLink {
-                    ActivityView()
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "bolt.horizontal")
-                            .font(.title3)
-                            .foregroundStyle(.orange)
-                        Text("Activity Feed")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding()
-                    .cardStyle()
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal)
-
-                // Notifications
-                if !viewModel.notifications.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Notifications")
-                            .font(.headline)
-                            .padding(.horizontal)
-
-                        ForEach(viewModel.notifications) { notification in
-                            HStack(spacing: 12) {
-                                Circle()
-                                    .fill(notification.isRead ? .clear : .blue)
-                                    .frame(width: 8, height: 8)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(lifecycleLabel(for: notification.type))
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                    Text(notification.title)
+            // Tab picker
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(ProfileSection.allCases, id: \.self) { section in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { selectedSection = section }
+                        } label: {
+                            VStack(spacing: 6) {
+                                HStack(spacing: 4) {
+                                    Text(section.rawValue)
                                         .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                    Text(notification.message)
-                                        .font(.subheadline)
-                                    Text(notification.createdAt.relativeTime)
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
+                                        .fontWeight(selectedSection == section ? .semibold : .regular)
+                                    if section == .notifications {
+                                        let unread = viewModel.notifications.filter { !$0.isRead }.count
+                                        if unread > 0 {
+                                            Text("\(unread)")
+                                                .font(.caption2)
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(.white)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 1)
+                                                .background(Capsule().fill(.red))
+                                        }
+                                    } else {
+                                        let count = sectionCount(section, profile: profile)
+                                        if count > 0 {
+                                            Text("\(count)")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
                                 }
+                                .foregroundStyle(selectedSection == section ? .primary : .secondary)
+
+                                Rectangle()
+                                    .fill(selectedSection == section ? Color.accentColor : .clear)
+                                    .frame(height: 2)
                             }
-                            .padding(.horizontal)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 16)
                         }
+                        .accessibilityLabel("\(section.rawValue) tab")
                     }
                 }
             }
+
+            Divider()
+
+            // Tab content
+            ScrollView {
+                VStack(spacing: 16) {
+                    switch selectedSection {
+                    case .projects:
+                        // Admin section
+                        if authService.currentUser?.isAdmin == true {
+                            NavigationLink {
+                                AdminDashboardView()
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "shield.checkered")
+                                        .font(.title3)
+                                        .foregroundStyle(.red)
+                                    Text("Admin Panel")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding()
+                                .cardStyle()
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal)
+                        }
+
+                        // Activity link
+                        NavigationLink {
+                            ActivityView()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "bolt.horizontal")
+                                    .font(.title3)
+                                    .foregroundStyle(.orange)
+                                Text("Activity Feed")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding()
+                            .cardStyle()
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal)
+
+                        if let projects = profile.projects, !projects.isEmpty {
+                            projectList(projects)
+                        } else {
+                            emptyTab(title: "No projects yet", message: "Submit your first project to get started.", icon: "keyboard")
+                        }
+
+                    case .favorites:
+                        if !viewModel.favorites.isEmpty {
+                            projectList(viewModel.favorites)
+                        } else {
+                            emptyTab(title: "No favorites yet", message: "Heart projects you like to save them here.", icon: "heart")
+                        }
+
+                    case .collection:
+                        if !viewModel.collection.isEmpty {
+                            projectList(viewModel.collection)
+                        } else {
+                            emptyTab(title: "No items in collection", message: "Add projects to your collection to track them here.", icon: "tray")
+                        }
+
+                    case .notifications:
+                        if !viewModel.notifications.isEmpty {
+                            ForEach(viewModel.notifications) { notification in
+                                HStack(spacing: 12) {
+                                    Circle()
+                                        .fill(notification.isRead ? .clear : .blue)
+                                        .frame(width: 8, height: 8)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(lifecycleLabel(for: notification.type))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                        Text(notification.title)
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                        Text(notification.message)
+                                            .font(.subheadline)
+                                        Text(notification.createdAt.relativeTime)
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .padding(.horizontal)
+                                .padding(.vertical, 4)
+                            }
+                        } else {
+                            emptyTab(title: "No notifications", message: "You're all caught up.", icon: "bell")
+                        }
+                    }
+                }
+                .padding(.top, 12)
+            }
+            .refreshable {
+                await viewModel.loadCurrentProfile()
+                await viewModel.loadNotifications()
+                await viewModel.loadFavorites()
+                await viewModel.loadCollection()
+            }
         }
-        .refreshable {
-            await viewModel.loadCurrentProfile()
-            await viewModel.loadNotifications()
-            await viewModel.loadFavorites()
-            await viewModel.loadCollection()
+    }
+
+    private func sectionCount(_ section: ProfileSection, profile: UserProfile) -> Int {
+        switch section {
+        case .projects: return profile.projects?.count ?? 0
+        case .favorites: return viewModel.favorites.count
+        case .collection: return viewModel.collection.count
+        case .notifications: return viewModel.notifications.count
         }
     }
 
     @ViewBuilder
-    private func profileProjectSection(title: String, projects: [Project]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func projectList(_ projects: [Project]) -> some View {
+        ForEach(projects) { project in
+            let safeSlug = normalizeProfileProjectSlug(project.slug)
+            Group {
+                if safeSlug.isEmpty {
+                    ProfileProjectRow(project: project)
+                } else {
+                    NavigationLink {
+                        ProjectDetailView(slug: safeSlug)
+                    } label: {
+                        ProfileProjectRow(project: project)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+        }
+    }
+
+    @ViewBuilder
+    private func emptyTab(title: String, message: String, icon: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.largeTitle)
+                .foregroundStyle(.quaternary)
             Text(title)
                 .font(.headline)
-                .padding(.horizontal)
-
-            ForEach(projects) { project in
-                let safeSlug = normalizeProfileProjectSlug(project.slug)
-                Group {
-                    if safeSlug.isEmpty {
-                        ProfileProjectRow(project: project)
-                    } else {
-                        NavigationLink {
-                            ProjectDetailView(slug: safeSlug)
-                        } label: {
-                            ProfileProjectRow(project: project)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-            }
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
     }
 
     private func lifecycleLabel(for type: String) -> String {
