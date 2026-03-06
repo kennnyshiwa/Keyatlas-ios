@@ -52,12 +52,27 @@ private struct ActivityRowView: View {
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
+                // Title
+                if let title = activity.title, !title.isEmpty {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(2)
+                }
+
                 // Message
                 if let message = activity.message, !message.isEmpty {
-                    Text(message)
-                        .font(.subheadline)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
+                    if let user = activity.user {
+                        Text("\(user.displayName) \(message)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    } else {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
 
                 // Project reference

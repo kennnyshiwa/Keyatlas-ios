@@ -4,13 +4,14 @@ import Foundation
 struct Activity: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let type: String
+    let title: String?
     let message: String?
     let createdAt: String
     let project: ActivityProject?
     let user: ActivityUser?
 
     enum CodingKeys: String, CodingKey {
-        case id, type, message, project, user
+        case id, type, title, message, project, user
         case createdAt = "created_at"
         case createdAtCamel = "createdAt"
     }
@@ -19,6 +20,7 @@ struct Activity: Codable, Identifiable, Hashable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         type = try container.decode(String.self, forKey: .type)
+        title = try? container.decodeIfPresent(String.self, forKey: .title)
         message = try? container.decodeIfPresent(String.self, forKey: .message)
         project = try? container.decodeIfPresent(ActivityProject.self, forKey: .project)
         user = try? container.decodeIfPresent(ActivityUser.self, forKey: .user)
@@ -31,6 +33,7 @@ struct Activity: Codable, Identifiable, Hashable, Sendable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(type, forKey: .type)
+        try container.encodeIfPresent(title, forKey: .title)
         try container.encodeIfPresent(message, forKey: .message)
         try container.encodeIfPresent(project, forKey: .project)
         try container.encodeIfPresent(user, forKey: .user)
@@ -39,26 +42,24 @@ struct Activity: Codable, Identifiable, Hashable, Sendable {
 
     var typeDisplayName: String {
         switch type {
-        case "FOLLOW": return "Follow"
-        case "PROJECT_UPDATE": return "Project Update"
-        case "STATUS_CHANGE": return "Status Change"
-        case "NEW_PROJECT": return "New Project"
-        case "PROJECT_FAVORITED": return "Favorited"
-        case "PROJECT_FOLLOWED": return "Followed"
-        case "COMMENT": return "Comment"
+        case "new_project": return "New Project"
+        case "comment": return "Comment"
+        case "forum_thread": return "Forum Thread"
+        case "project_update": return "Project Update"
+        case "FOLLOW", "follow": return "Follow"
+        case "STATUS_CHANGE", "status_change": return "Status Change"
         default: return type.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
 
     var typeIcon: String {
         switch type {
-        case "FOLLOW": return "person.badge.plus"
-        case "PROJECT_UPDATE": return "bell"
-        case "STATUS_CHANGE": return "arrow.triangle.2.circlepath"
-        case "NEW_PROJECT": return "plus.circle"
-        case "PROJECT_FAVORITED": return "heart.fill"
-        case "PROJECT_FOLLOWED": return "bell.fill"
-        case "COMMENT": return "bubble.left"
+        case "new_project": return "plus.circle"
+        case "comment": return "bubble.left"
+        case "forum_thread": return "bubble.left.and.bubble.right"
+        case "project_update": return "bell"
+        case "FOLLOW", "follow": return "person.badge.plus"
+        case "STATUS_CHANGE", "status_change": return "arrow.triangle.2.circlepath"
         default: return "bolt"
         }
     }
