@@ -1,5 +1,20 @@
 import SwiftUI
 
+private func activityProjectSlug(_ activity: Activity) -> String? {
+    guard let slug = activity.project?.slug, !slug.isEmpty else { return nil }
+    // Strip any URL prefix if accidentally included
+    if let url = URL(string: slug), let host = url.host, !host.isEmpty {
+        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if path.hasPrefix("projects/") {
+            return String(path.dropFirst("projects/".count))
+        }
+        if let last = path.split(separator: "/").last, !last.isEmpty {
+            return String(last)
+        }
+    }
+    return slug
+}
+
 struct ActivityView: View {
     @State private var viewModel = ActivityViewModel()
 
@@ -13,14 +28,25 @@ struct ActivityView: View {
             } else if viewModel.activities.isEmpty {
                 EmptyStateView(
                     title: "No Activity",
-                    message: "Follow projects and users to see your activity feed here.",
+                    message: "Recent community activity will appear here.",
                     systemImage: "bolt.horizontal"
                 )
             } else {
                 List(viewModel.activities) { activity in
-                    ActivityRowView(activity: activity)
+                    if let slug = activityProjectSlug(activity) {
+                        NavigationLink {
+                            ProjectDetailView(slug: slug)
+                        } label: {
+                            ActivityRowView(activity: activity)
+                        }
+                        .buttonStyle(.plain)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    } else {
+                        ActivityRowView(activity: activity)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    }
                 }
                 .listStyle(.plain)
             }
@@ -37,22 +63,19 @@ private struct ActivityRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Icon
             Image(systemName: activity.typeIcon)
                 .font(.subheadline)
-                .foregroundStyle(.orange)
+                .foregroundStyle(iconColor)
                 .frame(width: 32, height: 32)
-                .background(.orange.opacity(0.1))
+                .background(iconColor.opacity(0.1))
                 .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 4) {
-                // Type label
                 Text(activity.typeDisplayName)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
-                // Title
                 if let title = activity.title, !title.isEmpty {
                     Text(title)
                         .font(.subheadline)
@@ -60,7 +83,6 @@ private struct ActivityRowView: View {
                         .lineLimit(2)
                 }
 
-                // Message
                 if let message = activity.message, !message.isEmpty {
                     if let user = activity.user {
                         Text("\(user.displayName) \(message)")
@@ -75,40 +97,45 @@ private struct ActivityRowView: View {
                     }
                 }
 
-                // Project reference
-                if let project = activity.project, let title = project.title {
-                    HStack(spacing: 6) {
-                        Image(systemName: "keyboard")
+                HStack(spacing: 8) {
+                    if let user = activity.user {
+                        HStack(spacing: 4) {
+                            AvatarImage(url: user.avatarUrl, size: 16)
+                            Text(user.displayName)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if !activity.createdAt.isEmpty {
+                        Text(activity.createdAt.relativeTime)
                             .font(.caption2)
-                        Text(title)
-                            .font(.caption)
-                            .fontWeight(.medium)
+                            .foregroundStyle(.tertiary)
                     }
-                    .foregroundStyle(.blue)
-                }
-
-                // User reference
-                if let user = activity.user {
-                    HStack(spacing: 4) {
-                        AvatarImage(url: user.avatarUrl, size: 16)
-                        Text(user.displayName)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                // Timestamp
-                if !activity.createdAt.isEmpty {
-                    Text(activity.createdAt.relativeTime)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            if activityProjectSlug(activity) != nil {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(10)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .accessibilityLabel("\(activity.typeDisplayName): \(activity.message ?? "")")
+        .contentShape(Rectangle())
+        .accessibilityLabel("\(activity.typeDisplayName): \(activity.title ?? activity.message ?? "")")
+    }
+
+    private var iconColor: Color {
+        switch activity.type {
+        case "new_project": return .blue
+        case "comment": return .green
+        case "forum_thread": return .purple
+        case "project_update": return .orange
+        default: return .orange
+        }
     }
 }
