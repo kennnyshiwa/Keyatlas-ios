@@ -54,9 +54,10 @@ final class DiscoverViewModel: @unchecked Sendable {
 
     private func loadEndingSoon() async {
         do {
+            // Match web logic exactly: GROUP_BUY projects with gbEndDate in next 7 days, sorted ascending by gbEndDate
             let response: PaginatedResponse<Project> = try await api.request(
-                path: "/api/v1/projects",
-                query: ["status": "GROUP_BUY", "sort": "ending_soon", "page_size": "10"]
+                path: "/api/v1/discover/ending-soon",
+                query: ["page_size": "10"]
             )
             await MainActor.run { self.endingSoon = response.data }
         } catch {
