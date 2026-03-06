@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Full project detail view
 struct ProjectDetailView: View {
@@ -26,13 +27,33 @@ struct ProjectDetailView: View {
         .toolbar {
             if let project = viewModel.project {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    // Share button
-                    let shareURL = URL(string: "https://keyatlas.io/projects/\(project.slug)")!
-                    ShareLink(
-                        item: shareURL,
-                        subject: Text(project.title),
-                        message: Text("Check out \(project.title) on KeyAtlas")
-                    ) {
+                    Menu {
+                        ShareLink(
+                            item: shareURL(for: project, ref: "ios_share"),
+                            subject: Text(project.title),
+                            message: Text(shareMessage(for: project, ref: "ios_share"))
+                        ) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            copyShareMessage(project: project, ref: "ios_share")
+                        } label: {
+                            Label("Copy message", systemImage: "doc.on.doc")
+                        }
+
+                        Button {
+                            copyShareMessage(project: project, ref: "ios_discord")
+                        } label: {
+                            Label("Copy Discord message", systemImage: "bubble.left.and.bubble.right")
+                        }
+
+                        Button {
+                            copyShareMessage(project: project, ref: "ios_reddit")
+                        } label: {
+                            Label("Copy Reddit message", systemImage: "text.bubble")
+                        }
+                    } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
                     .accessibilityLabel("Share project")
@@ -486,6 +507,31 @@ struct ProjectDetailView: View {
                 Divider()
             }
         }
+    }
+
+    private func shareURL(for project: Project, ref: String) -> URL {
+        var components = URLComponents(string: "https://keyatlas.io/projects/\(project.slug)")!
+        components.queryItems = [
+            URLQueryItem(name: "ref", value: ref),
+            URLQueryItem(name: "utm_source", value: ref),
+            URLQueryItem(name: "utm_campaign", value: "project_share_ios")
+        ]
+        return components.url ?? URL(string: "https://keyatlas.io/projects/\(project.slug)")!
+    }
+
+    private func shareMessage(for project: Project, ref: String) -> String {
+        let url = shareURL(for: project, ref: ref).absoluteString
+        let socialProof = "\(project.followCount ?? 0) followers • \(project.favoriteCount ?? 0) bookmarks • \(project.commentCount) comments"
+
+        return [
+            "\(project.title) — \(project.status.displayName)",
+            socialProof,
+            "Track updates on KeyAtlas: \(url)"
+        ].joined(separator: "\n")
+    }
+
+    private func copyShareMessage(project: Project, ref: String) {
+        UIPasteboard.general.string = shareMessage(for: project, ref: ref)
     }
 
     private func canQuickEdit(project: Project) -> Bool {
