@@ -16,9 +16,8 @@ struct SettingsView: View {
     @State private var showSignOutConfirm = false
 
     // Notification prefs
-    @State private var notifyFollowed = true
-    @State private var notifyStatusChange = true
-    @State private var notifyComments = true
+    @State private var notifyProjectStatusChanges = true
+    @State private var notifyGbEndingSoon = true
 
     var body: some View {
         NavigationStack {
@@ -51,12 +50,10 @@ struct SettingsView: View {
                 }
 
                 Section("Notifications") {
-                    Toggle("Followed project updates", isOn: $notifyFollowed)
-                        .accessibilityLabel("Notify on followed project updates")
-                    Toggle("Status changes", isOn: $notifyStatusChange)
-                        .accessibilityLabel("Notify on status changes")
-                    Toggle("Comments on my projects", isOn: $notifyComments)
-                        .accessibilityLabel("Notify on comments")
+                    Toggle("Project status changes", isOn: $notifyProjectStatusChanges)
+                        .accessibilityLabel("Notify on project status changes")
+                    Toggle("Group buys ending soon", isOn: $notifyGbEndingSoon)
+                        .accessibilityLabel("Notify on group buys ending soon")
                 }
 
                 if let error {
@@ -105,8 +102,51 @@ struct SettingsView: View {
             }
             .onAppear {
                 username = authService.currentUser?.username ?? ""
+                Task { await loadNotificationPreferences() }
             }
         }
+    }
+
+    private func loadNotificationPreferences() async {
+        struct Preference: Codable, Hashable, Sendable {
+            let type: String
+            let inApp: Bool
+            let email: Bool
+        }
+
+        struct Response: Codable, Hashable, Sendable {
+            let data: [Preference]
+        }
+
+        do {
+            let response: Response = try await APIClient.shared.request(
+                path: "/api/v1/notification-preferences",
+                authenticated: true
+            )
+            if let status = response.data.first(where: { $0.type == "PROJECT_STATUS_CHANGES" }) {
+                notifyProjectStatusChanges = status.inApp || status.email
+            }
+            if let gbEndingSoon = response.data.first(where: { $0.type == "PROJECT_GB_ENDING_SOON" }) {
+                notifyGbEndingSoon = gbEndingSoon.inApp || gbEndingSoon.email
+            }
+        } catch {
+            // Keep defaults if preferences are unavailable
+        }
+    }
+
+    private func updateNotificationPreference(type: String, enabled: Bool) async throws {
+        struct UpdateBody: Codable, Hashable, Sendable {
+            let type: String
+            let inApp: Bool
+            let email: Bool
+        }
+
+        _ = try await APIClient.shared.request(
+            .patch,
+            path: "/api/v1/notification-preferences",
+            body: UpdateBody(type: type, inApp: enabled, email: enabled),
+            authenticated: true
+        ) as EmptyResponse
     }
 
     private func saveProfile() async {
@@ -144,28 +184,8 @@ struct SettingsView: View {
                 )
             )
 
-            // Save notification prefs
-            struct NotifPrefs: Codable, Hashable, Sendable {
-                let followedUpdates: Bool
-                let statusChanges: Bool
-                let comments: Bool
-
-                enum CodingKeys: String, CodingKey {
-                    case followedUpdates = "followed_updates"
-                    case statusChanges = "status_changes"
-                    case comments
-                }
-            }
-
-            try await APIClient.shared.requestVoid(
-                .put,
-                path: "/api/v1/users/me/notifications",
-                body: NotifPrefs(
-                    followedUpdates: notifyFollowed,
-                    statusChanges: notifyStatusChange,
-                    comments: notifyComments
-                )
-            )
+            try await updateNotificationPreference(type: "PROJECT_STATUS_CHANGES", enabled: notifyProjectStatusChanges)
+            try await updateNotificationPreference(type: "PROJECT_GB_ENDING_SOON", enabled: notifyGbEndingSoon)
 
             dismiss()
         } catch {

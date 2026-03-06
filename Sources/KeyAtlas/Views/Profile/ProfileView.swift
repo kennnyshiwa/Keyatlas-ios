@@ -181,7 +181,13 @@ struct ProfileTabView: View {
                                 Circle()
                                     .fill(notification.isRead ? .clear : .blue)
                                     .frame(width: 8, height: 8)
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(lifecycleLabel(for: notification.type))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                    Text(notification.title)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
                                     Text(notification.message)
                                         .font(.subheadline)
                                     Text(notification.createdAt.relativeTime)
@@ -199,6 +205,17 @@ struct ProfileTabView: View {
         .refreshable {
             await viewModel.loadCurrentProfile()
             await viewModel.loadNotifications()
+        }
+    }
+
+    private func lifecycleLabel(for type: String) -> String {
+        switch type {
+        case "PROJECT_STATUS_CHANGE":
+            return "Project Status"
+        case "PROJECT_GB_ENDING_SOON":
+            return "Group Buy Ending Soon"
+        default:
+            return "Notification"
         }
     }
 
