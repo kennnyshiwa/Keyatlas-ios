@@ -23,15 +23,28 @@ struct ProjectDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if let project = viewModel.project,
-               canQuickEdit(project: project) {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showEditSheet = true
-                    } label: {
-                        Image(systemName: "pencil")
+            if let project = viewModel.project {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    // Share button
+                    let shareURL = URL(string: "https://keyatlas.io/projects/\(project.slug)")!
+                    ShareLink(
+                        item: shareURL,
+                        subject: Text(project.title),
+                        message: Text("Check out \(project.title) on KeyAtlas")
+                    ) {
+                        Image(systemName: "square.and.arrow.up")
                     }
-                    .accessibilityLabel("Quick edit project")
+                    .accessibilityLabel("Share project")
+
+                    // Edit button (owner only)
+                    if canQuickEdit(project: project) {
+                        Button {
+                            showEditSheet = true
+                        } label: {
+                            Image(systemName: "pencil")
+                        }
+                        .accessibilityLabel("Quick edit project")
+                    }
                 }
             }
         }

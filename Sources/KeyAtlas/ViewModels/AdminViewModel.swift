@@ -2,6 +2,23 @@ import Foundation
 
 // MARK: - Admin Models
 
+struct AdminVendor: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let slug: String
+    let website: String?
+    let region: String?
+    let logo: String?
+    let projectCount: Int?
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, slug, website, region, logo
+        case projectCount = "project_count"
+        case createdAt = "created_at"
+    }
+}
+
 struct AdminDashboard: Codable, Hashable, Sendable {
     let totalProjects: Int
     let publishedProjects: Int
@@ -233,6 +250,70 @@ final class AdminAuditLogsViewModel: @unchecked Sendable {
                 path: "/api/v1/admin/audit-logs", authenticated: true
             )
             await MainActor.run { self.logs = response.data }
+        } catch {
+            await MainActor.run { self.error = error.localizedDescription }
+        }
+    }
+}
+
+@Observable
+final class AdminVendorsViewModel: @unchecked Sendable {
+    var vendors: [AdminVendor] = []
+    var isLoading = false
+    var error: String?
+
+    private let api = APIClient.shared
+
+    func load() async {
+        await MainActor.run { self.isLoading = true; self.error = nil }
+        defer { Task { @MainActor in self.isLoading = false } }
+
+        do {
+            let response: PaginatedResponse<AdminVendor> = try await api.request(
+                path: "/api/v1/admin/vendors", authenticated: true
+            )
+            await MainActor.run { self.vendors = response.data }
+        } catch {
+            await MainActor.run { self.error = error.localizedDescription }
+        }
+    }
+
+    func createVendor(name: String, slug: String, website: String?, region: String?) async throws {
+        struct CreateBody: Codable, Sendable {
+            let name: String
+            let slug: String
+            let website: String?
+            let region: String?
+        }
+        let _: APIDataResponse<AdminVendor> = try await api.request(
+            .post,
+            path: "/api/v1/admin/vendors",
+            body: CreateBody(name: name, slug: slug, website: website?.isEmpty == true ? nil : website, region: region?.isEmpty == true ? nil : region),
+            authenticated: true
+        )
+        await load()
+    }
+
+    func updateVendor(_ vendor: AdminVendor, name: String, slug: String, website: String?, region: String?) async throws {
+        struct UpdateBody: Codable, Sendable {
+            let name: String
+            let slug: String
+            let website: String?
+            let region: String?
+        }
+        let _: APIDataResponse<AdminVendor> = try await api.request(
+            .patch,
+            path: "/api/v1/admin/vendors/\(vendor.id)",
+            body: UpdateBody(name: name, slug: slug, website: website?.isEmpty == true ? nil : website, region: region?.isEmpty == true ? nil : region),
+            authenticated: true
+        )
+        await load()
+    }
+
+    func deleteVendor(_ vendor: AdminVendor) async {
+        do {
+            try await api.requestVoid(.delete, path: "/api/v1/admin/vendors/\(vendor.id)")
+            await load()
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }

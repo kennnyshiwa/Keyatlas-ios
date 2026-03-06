@@ -4,6 +4,47 @@ import PhotosUI
 import UIKit
 #endif
 
+// MARK: - Autosave Draft
+
+private struct ProjectDraft: Codable {
+    var title: String
+    var slug: String
+    var description: String
+    var status: String
+    var categoryId: String
+    var estimatedDelivery: String
+    var minPrice: String
+    var maxPrice: String
+    var gbStartDate: Date
+    var gbEndDate: Date
+    var showDatePickers: Bool
+}
+
+// MARK: - URL Import Response
+
+private struct URLImportResponse: Codable, Sendable {
+    let title: String?
+    let description: String?
+    let status: String?
+    let gbStartDate: String?
+    let gbEndDate: String?
+    let links: [ImportedLink]?
+    let tags: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case title, description, status, links, tags
+        case gbStartDate = "gb_start_date"
+        case gbEndDate = "gb_end_date"
+    }
+
+    struct ImportedLink: Codable, Sendable {
+        let title: String?
+        let url: String?
+    }
+}
+
+// MARK: - Submission View
+
 struct ProjectSubmissionView: View {
     @Environment(\.dismiss) private var dismiss
     private let projectToEdit: Project?
@@ -30,7 +71,31 @@ struct ProjectSubmissionView: View {
     @State private var error: String?
     @State private var currentSection = 0
 
-    private let sections = ["Basic Info", "Details", "Media", "Pricing & Dates"]
+    // Draft delete
+    @State private var showDeleteDraftAlert = false
+    @State private var isDeletingDraft = false
+
+    // URL import
+    @State private var importURL = ""
+    @State private var isImporting = false
+    @State private var importError: String?
+    @State private var showImportError = false
+
+    // Autosave
+    @State private var autosaveTask: Task<Void, Never>?
+    @State private var showRestoreDraftAlert = false
+
+    // Duplicate from existing project
+    @State private var showDuplicateSheet = false
+    @State private var userProjects: [Project] = []
+    @State private var isLoadingUserProjects = false
+
+    private let sections = ["Import", "Basic Info", "Details", "Media", "Pricing & Dates"]
+
+    private var draftKey: String {
+        if let slug = projectToEdit?.slug { return "draft-\(slug)" }
+        return "draft-new"
+    }
 
     init(projectToEdit: Project? = nil) {
         self.projectToEdit = projectToEdit
@@ -75,10 +140,11 @@ struct ProjectSubmissionView: View {
 
                 // Content
                 TabView(selection: $currentSection) {
-                    basicInfoSection.tag(0)
-                    detailsSection.tag(1)
-                    mediaSection.tag(2)
-                    pricingSection.tag(3)
+                    importSection.tag(0)
+                    basicInfoSection.tag(1)
+                    detailsSection.tag(2)
+                    mediaSection.tag(3)
+                    pricingSection.tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -86,7 +152,10 @@ struct ProjectSubmissionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") {
+                        autosaveTask?.cancel()
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(projectToEdit == nil ? "Submit" : "Save") {
@@ -95,8 +164,113 @@ struct ProjectSubmissionView: View {
                     .disabled(title.isEmpty || isSubmitting)
                     .accessibilityLabel(projectToEdit == nil ? "Submit project" : "Save project")
                 }
+
+                // Delete Draft button for unpublished edits
+                if let project = projectToEdit, project.published != true {
+                    ToolbarItem(placement: .bottomBar) {
+                        Button(role: .destructive) {
+                            showDeleteDraftAlert = true
+                        } label: {
+                            Label("Delete Draft", systemImage: "trash")
+                                .foregroundStyle(.red)
+                        }
+                        .accessibilityLabel("Delete draft project")
+                        .disabled(isDeletingDraft)
+                    }
+                }
             }
-            .task { await loadCategories() }
+            .task {
+                await loadCategories()
+                checkForSavedDraft()
+            }
+            .alert("Restore Draft?", isPresented: $showRestoreDraftAlert) {
+                Button("Restore") { restoreDraft() }
+                Button("Discard", role: .destructive) { clearDraft() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("A saved draft was found. Would you like to restore it?")
+            }
+            .alert("Delete Draft", isPresented: $showDeleteDraftAlert) {
+                Button("Delete", role: .destructive) {
+                    Task { await deleteDraft() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete this draft project. This action cannot be undone.")
+            }
+            .alert("Import Error", isPresented: $showImportError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(importError ?? "Failed to import URL")
+            }
+            .sheet(isPresented: $showDuplicateSheet) {
+                duplicatePickerView
+            }
+            // Autosave trigger
+            .onChange(of: title) { _, _ in scheduleAutosave() }
+            .onChange(of: slug) { _, _ in scheduleAutosave() }
+            .onChange(of: description) { _, _ in scheduleAutosave() }
+            .onChange(of: status) { _, _ in scheduleAutosave() }
+            .onChange(of: categoryId) { _, _ in scheduleAutosave() }
+            .onChange(of: estimatedDelivery) { _, _ in scheduleAutosave() }
+            .onChange(of: minPrice) { _, _ in scheduleAutosave() }
+            .onChange(of: maxPrice) { _, _ in scheduleAutosave() }
+        }
+    }
+
+    // MARK: - Import Section
+
+    private var importSection: some View {
+        Form {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Import from URL")
+                        .font(.headline)
+                    Text("Paste a project URL to auto-fill form fields.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    TextField("https://...", text: $importURL)
+                        .keyboardType(.URL)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .accessibilityLabel("Import URL")
+
+                    Button {
+                        Task { await importFromURL() }
+                    } label: {
+                        HStack {
+                            if isImporting {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                            Text(isImporting ? "Importing…" : "Import")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(importURL.isEmpty || isImporting)
+                    .accessibilityLabel("Import from URL")
+                }
+                .padding(.vertical, 4)
+            }
+
+            if projectToEdit == nil {
+                Section {
+                    Button {
+                        Task { await loadUserProjectsForDuplicate() }
+                        showDuplicateSheet = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "doc.on.doc")
+                            Text("Start from Existing Project")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityLabel("Duplicate existing project")
+                }
+            }
         }
     }
 
@@ -255,6 +429,56 @@ struct ProjectSubmissionView: View {
         }
     }
 
+    // MARK: - Duplicate Picker Sheet
+
+    private var duplicatePickerView: some View {
+        NavigationStack {
+            Group {
+                if isLoadingUserProjects {
+                    ProgressView("Loading your projects…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if userProjects.isEmpty {
+                    EmptyStateView(
+                        title: "No Projects",
+                        message: "You don't have any projects to duplicate.",
+                        systemImage: "doc"
+                    )
+                } else {
+                    List(userProjects) { project in
+                        Button {
+                            duplicateFrom(project)
+                            showDuplicateSheet = false
+                        } label: {
+                            HStack(spacing: 12) {
+                                CachedImage(url: project.heroImageUrl)
+                                    .frame(width: 56, height: 40)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(project.title)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.primary)
+                                    Text(project.status.displayName)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .accessibilityLabel("Duplicate \(project.title)")
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Start from Existing")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showDuplicateSheet = false }
+                }
+            }
+        }
+    }
+
     // MARK: - Actions
 
     private func loadCategories() async {
@@ -268,6 +492,93 @@ struct ProjectSubmissionView: View {
             if let cats: [ProjectCategory] = try? await APIClient.shared.request(path: "/api/v1/categories") {
                 categories = cats
             }
+        }
+    }
+
+    private func importFromURL() async {
+        isImporting = true
+        defer { isImporting = false }
+
+        struct ImportBody: Codable, Sendable { let url: String }
+
+        do {
+            let result: URLImportResponse = try await APIClient.shared.request(
+                .post,
+                path: "/api/import/url",
+                body: ImportBody(url: importURL),
+                authenticated: true
+            )
+
+            // Only prefill empty fields
+            if title.isEmpty, let t = result.title { title = t }
+            if description.isEmpty, let d = result.description { description = d }
+            if let s = result.status, let parsed = ProjectStatus(rawValue: s) {
+                status = parsed
+            }
+            if let start = result.gbStartDate, !start.isEmpty {
+                if let date = start.asDate { gbStartDate = date; showDatePickers = true }
+            }
+            if let end = result.gbEndDate, !end.isEmpty {
+                if let date = end.asDate { gbEndDate = date; showDatePickers = true }
+            }
+
+            // Auto-generate slug if empty
+            if slug.isEmpty && !title.isEmpty {
+                slug = generateSlug(from: title)
+            }
+
+            // Move to basic info after import
+            withAnimation { currentSection = 1 }
+        } catch {
+            importError = error.localizedDescription
+            showImportError = true
+        }
+    }
+
+    private func loadUserProjectsForDuplicate() async {
+        isLoadingUserProjects = true
+        defer { isLoadingUserProjects = false }
+
+        do {
+            let response: APIDataResponse<UserProfile> = try await APIClient.shared.request(
+                path: "/api/v1/profile",
+                authenticated: true
+            )
+            userProjects = response.data.projects ?? []
+        } catch {
+            // Silently fail
+        }
+    }
+
+    private func duplicateFrom(_ project: Project) {
+        title = project.title + " (Copy)"
+        slug = ""  // Force new slug
+        description = project.description?.keyAtlasDisplayText ?? ""
+        status = project.status
+        categoryId = project.categoryId ?? ""
+        estimatedDelivery = project.estimatedDelivery ?? ""
+        if let min = project.pricing?.minPrice { minPrice = String(Double(min) / 100.0) }
+        if let max = project.pricing?.maxPrice { maxPrice = String(Double(max) / 100.0) }
+        if let start = project.gbStartDate?.asDate { gbStartDate = start; showDatePickers = true }
+        if let end = project.gbEndDate?.asDate { gbEndDate = end; showDatePickers = true }
+
+        // Generate new slug from new title
+        slug = generateSlug(from: title)
+
+        withAnimation { currentSection = 1 }
+    }
+
+    private func deleteDraft() async {
+        guard let editSlug = projectToEdit?.slug else { return }
+        isDeletingDraft = true
+        defer { isDeletingDraft = false }
+
+        do {
+            try await APIClient.shared.requestVoid(.delete, path: "/api/v1/projects/\(editSlug)")
+            clearDraft()
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 
@@ -351,6 +662,9 @@ struct ProjectSubmissionView: View {
                 }
             }
 
+            // Clear autosave draft on success
+            clearDraft()
+            autosaveTask?.cancel()
             dismiss()
         } catch {
             self.error = error.localizedDescription
@@ -361,5 +675,64 @@ struct ProjectSubmissionView: View {
         text.lowercased()
             .replacingOccurrences(of: " ", with: "-")
             .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+    }
+
+    // MARK: - Autosave
+
+    private func scheduleAutosave() {
+        autosaveTask?.cancel()
+        autosaveTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds debounce
+            guard !Task.isCancelled else { return }
+            saveDraft()
+        }
+    }
+
+    private func saveDraft() {
+        let draft = ProjectDraft(
+            title: title,
+            slug: slug,
+            description: description,
+            status: status.rawValue,
+            categoryId: categoryId,
+            estimatedDelivery: estimatedDelivery,
+            minPrice: minPrice,
+            maxPrice: maxPrice,
+            gbStartDate: gbStartDate,
+            gbEndDate: gbEndDate,
+            showDatePickers: showDatePickers
+        )
+        if let data = try? JSONEncoder().encode(draft) {
+            UserDefaults.standard.set(data, forKey: draftKey)
+        }
+    }
+
+    private func checkForSavedDraft() {
+        // Only check for saved drafts in new project mode
+        guard projectToEdit == nil else { return }
+        guard let data = UserDefaults.standard.data(forKey: draftKey),
+              let draft = try? JSONDecoder().decode(ProjectDraft.self, from: data),
+              !draft.title.isEmpty else { return }
+        showRestoreDraftAlert = true
+    }
+
+    private func restoreDraft() {
+        guard let data = UserDefaults.standard.data(forKey: draftKey),
+              let draft = try? JSONDecoder().decode(ProjectDraft.self, from: data) else { return }
+        title = draft.title
+        slug = draft.slug
+        description = draft.description
+        if let parsed = ProjectStatus(rawValue: draft.status) { status = parsed }
+        categoryId = draft.categoryId
+        estimatedDelivery = draft.estimatedDelivery
+        minPrice = draft.minPrice
+        maxPrice = draft.maxPrice
+        gbStartDate = draft.gbStartDate
+        gbEndDate = draft.gbEndDate
+        showDatePickers = draft.showDatePickers
+    }
+
+    private func clearDraft() {
+        UserDefaults.standard.removeObject(forKey: draftKey)
     }
 }

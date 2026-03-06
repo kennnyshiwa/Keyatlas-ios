@@ -6,6 +6,9 @@ final class ProfileViewModel: @unchecked Sendable {
     var isLoading = false
     var error: String?
     var notifications: [AppNotification] = []
+    var favorites: [Project] = []
+    var collection: [Project] = []
+    var unreadNotificationCount: Int = 0
 
     private let api = APIClient.shared
 
@@ -40,9 +43,54 @@ final class ProfileViewModel: @unchecked Sendable {
                 path: "/api/v1/notifications",
                 authenticated: true
             )
-            await MainActor.run { self.notifications = response.data }
+            await MainActor.run {
+                self.notifications = response.data
+                self.unreadNotificationCount = response.data.filter { !$0.isRead }.count
+            }
         } catch {
             // Silently fail
+        }
+    }
+
+    func loadFavorites() async {
+        do {
+            let response: PaginatedResponse<Project> = try await api.request(
+                path: "/api/v1/profile/favorites",
+                authenticated: true
+            )
+            await MainActor.run { self.favorites = response.data }
+        } catch {
+            // Try alternate structure
+            do {
+                let response: APIDataResponse<[Project]> = try await api.request(
+                    path: "/api/v1/profile/favorites",
+                    authenticated: true
+                )
+                await MainActor.run { self.favorites = response.data }
+            } catch {
+                // Silently fail
+            }
+        }
+    }
+
+    func loadCollection() async {
+        do {
+            let response: PaginatedResponse<Project> = try await api.request(
+                path: "/api/v1/profile/collection",
+                authenticated: true
+            )
+            await MainActor.run { self.collection = response.data }
+        } catch {
+            // Try alternate structure
+            do {
+                let response: APIDataResponse<[Project]> = try await api.request(
+                    path: "/api/v1/profile/collection",
+                    authenticated: true
+                )
+                await MainActor.run { self.collection = response.data }
+            } catch {
+                // Silently fail
+            }
         }
     }
 

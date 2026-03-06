@@ -197,11 +197,12 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let isFollowing: Bool?
     let isFavorited: Bool?
     let isFeatured: Bool?
+    let published: Bool?
     let createdAt: String
     let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, title, slug, description, status, category, tags, links, vendors, gallery, timeline, updates, comments, designer, pricing
+        case id, title, slug, description, status, category, tags, links, vendors, gallery, timeline, updates, comments, designer, pricing, published
         case heroImageUrl = "hero_image_url"
         case categoryId = "category_id"
         case estimatedDelivery = "estimated_delivery"

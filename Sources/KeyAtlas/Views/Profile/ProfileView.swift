@@ -85,6 +85,9 @@ struct ProfileTabView: View {
             .task {
                 if authService.isAuthenticated {
                     await viewModel.loadCurrentProfile()
+                    await viewModel.loadNotifications()
+                    await viewModel.loadFavorites()
+                    await viewModel.loadCollection()
                 }
             }
         }
@@ -144,30 +147,40 @@ struct ProfileTabView: View {
 
                 // User's projects
                 if let projects = profile.projects, !projects.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Projects")
-                            .font(.headline)
-                            .padding(.horizontal)
-
-                        ForEach(projects) { project in
-                            let safeSlug = normalizeProfileProjectSlug(project.slug)
-                            Group {
-                                if safeSlug.isEmpty {
-                                    ProfileProjectRow(project: project)
-                                } else {
-                                    NavigationLink {
-                                        ProjectDetailView(slug: safeSlug)
-                                    } label: {
-                                        ProfileProjectRow(project: project)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12)
-                        }
-                    }
+                    profileProjectSection(title: "Projects", projects: projects)
                 }
+
+                // Favorites
+                if !viewModel.favorites.isEmpty {
+                    profileProjectSection(title: "Favorites", projects: viewModel.favorites)
+                }
+
+                // Collection
+                if !viewModel.collection.isEmpty {
+                    profileProjectSection(title: "Collection", projects: viewModel.collection)
+                }
+
+                // Activity
+                NavigationLink {
+                    ActivityView()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "bolt.horizontal")
+                            .font(.title3)
+                            .foregroundStyle(.orange)
+                        Text("Activity Feed")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding()
+                    .cardStyle()
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
 
                 // Notifications
                 if !viewModel.notifications.isEmpty {
@@ -205,6 +218,35 @@ struct ProfileTabView: View {
         .refreshable {
             await viewModel.loadCurrentProfile()
             await viewModel.loadNotifications()
+            await viewModel.loadFavorites()
+            await viewModel.loadCollection()
+        }
+    }
+
+    @ViewBuilder
+    private func profileProjectSection(title: String, projects: [Project]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .padding(.horizontal)
+
+            ForEach(projects) { project in
+                let safeSlug = normalizeProfileProjectSlug(project.slug)
+                Group {
+                    if safeSlug.isEmpty {
+                        ProfileProjectRow(project: project)
+                    } else {
+                        NavigationLink {
+                            ProjectDetailView(slug: safeSlug)
+                        } label: {
+                            ProfileProjectRow(project: project)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+            }
         }
     }
 

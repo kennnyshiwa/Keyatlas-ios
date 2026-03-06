@@ -60,6 +60,13 @@ struct AdminDashboardView: View {
                             adminLink(title: "View Reports", icon: "exclamationmark.triangle")
                         }
                         Divider().padding(.leading, 48)
+                        Divider().padding(.leading, 48)
+                        NavigationLink {
+                            AdminVendorsView()
+                        } label: {
+                            adminLink(title: "Manage Vendors", icon: "building.2")
+                        }
+                        Divider().padding(.leading, 48)
                         NavigationLink {
                             AdminAuditLogsView()
                         } label: {
