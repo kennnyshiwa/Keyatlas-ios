@@ -246,6 +246,29 @@ struct ProfileTabView: View {
 
                     case .notifications:
                         if !viewModel.notifications.isEmpty {
+                            let unreadCount = viewModel.notifications.filter { !$0.isRead }.count
+
+                            HStack {
+                                Text(unreadCount > 0 ? "\(unreadCount) unread" : "All caught up")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button {
+                                    Task { await viewModel.markAllNotificationsAsRead() }
+                                } label: {
+                                    if viewModel.isMarkingAllRead {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                    } else {
+                                        Text("Mark all as read")
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(unreadCount == 0 || viewModel.isMarkingAllRead)
+                                .accessibilityLabel("Mark all notifications as read")
+                            }
+                            .padding(.horizontal)
+
                             ForEach(viewModel.notifications) { notification in
                                 HStack(spacing: 12) {
                                     Circle()

@@ -24,6 +24,15 @@ struct ProjectCardView: View {
                 // Status + Category row
                 HStack {
                     StatusBadge(status: project.status)
+                    if project.isRecentlyUpdated {
+                        Text("Recently updated")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(.orange.opacity(0.16))
+                            .clipShape(Capsule())
+                    }
                     Spacer()
                     if let category = project.category {
                         Text(category.name)
@@ -50,35 +59,34 @@ struct ProjectCardView: View {
                     }
                 }
 
-                // Bottom row: pricing, dates, follow count
-                HStack {
-                    if let price = project.pricing?.formattedRange {
-                        Text(price)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-
-                    Spacer()
-
-                    if let follows = project.followCount, follows > 0 {
-                        HStack(spacing: 2) {
-                            Image(systemName: "person.2")
-                                .font(.caption2)
-                            Text("\(follows)")
-                                .font(.caption)
+                // Bottom row: pricing + social proof + date
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        if let price = project.pricing?.formattedRange {
+                            Text(price)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
                         }
-                        .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        if let gbEnd = project.gbEndDate {
+                            HStack(spacing: 2) {
+                                Image(systemName: "clock")
+                                    .font(.caption2)
+                                Text("Ends \(gbEnd.readableDate)")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.secondary)
+                        }
                     }
 
-                    if let gbEnd = project.gbEndDate {
-                        HStack(spacing: 2) {
-                            Image(systemName: "clock")
-                                .font(.caption2)
-                            Text("Ends \(gbEnd.readableDate)")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        socialStat(icon: "person.2", value: project.followCount ?? 0)
+                        socialStat(icon: "heart", value: project.favoriteCount ?? 0)
+                        socialStat(icon: "bubble.left", value: project.commentCount)
                     }
+                    .foregroundStyle(.secondary)
                 }
             }
             .padding(12)
@@ -88,5 +96,15 @@ struct ProjectCardView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(project.title), \(project.status.displayName)")
+    }
+
+    private func socialStat(icon: String, value: Int) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.caption2)
+            Text("\(value)")
+                .font(.caption)
+                .fontWeight(.medium)
+        }
     }
 }

@@ -5,6 +5,35 @@ struct ProjectListView: View {
     @State private var viewModel = ProjectListViewModel()
     @State private var showSortPicker = false
 
+    private var followedProjects: [Project] {
+        viewModel.projects.filter { $0.isFollowing == true }
+    }
+
+    private var recommendationLabel: String {
+        if let first = followedProjects.first {
+            return "Because you follow \(first.title)"
+        }
+        return "From projects you follow"
+    }
+
+    private var recommendedProjects: [Project] {
+        let followedIDs = Set(followedProjects.map(\.id))
+        let followedCategories = Set(followedProjects.compactMap(\.categoryId))
+
+        return viewModel.projects
+            .filter { !followedIDs.contains($0.id) }
+            .filter { project in
+                guard let category = project.categoryId else { return false }
+                return followedCategories.contains(category)
+            }
+            .prefix(8)
+            .map { $0 }
+    }
+
+    private var trendingProjects: [Project] {
+        Array(viewModel.projects.sorted { $0.trendingScore > $1.trendingScore }.prefix(8))
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -54,9 +83,37 @@ struct ProjectListView: View {
         }
     }
 
+    private func laneSection(title: String, projects: [Project]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.headline)
+                .padding(.horizontal, 4)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(projects) { project in
+                        NavigationLink(value: project) {
+                            CompactProjectCard(project: project)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+
     private var projectList: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
+                if !recommendedProjects.isEmpty {
+                    laneSection(title: recommendationLabel, projects: recommendedProjects)
+                }
+
+                if !trendingProjects.isEmpty {
+                    laneSection(title: "Trending this week", projects: trendingProjects)
+                }
+
                 ForEach(viewModel.projects) { project in
                     NavigationLink(value: project) {
                         ProjectCardView(project: project)

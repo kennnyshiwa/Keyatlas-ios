@@ -22,6 +22,12 @@ private struct ProjectDraft: Codable {
 
 // MARK: - URL Import Response
 
+private struct ImportSummary {
+    let fieldsPrefilled: Int
+    let linksDetected: Int
+    let sectionsEstimated: Int
+}
+
 private struct URLImportResponse: Codable, Sendable {
     let title: String?
     let description: String?
@@ -80,6 +86,7 @@ struct ProjectSubmissionView: View {
     @State private var isImporting = false
     @State private var importError: String?
     @State private var showImportError = false
+    @State private var importSummary: ImportSummary?
 
     // Autosave
     @State private var autosaveTask: Task<Void, Never>?
@@ -224,10 +231,11 @@ struct ProjectSubmissionView: View {
         Form {
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Import from URL")
+                    Label("Fast start: import from URL", systemImage: "bolt.horizontal.circle.fill")
                         .font(.headline)
-                    Text("Paste a project URL to auto-fill form fields.")
-                        .font(.caption)
+                        .foregroundStyle(.blue)
+                    Text("Paste a project URL and we'll prefill as much as possible before you continue through the full submission flow.")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
 
                     TextField("https://...", text: $importURL)
@@ -244,15 +252,27 @@ struct ProjectSubmissionView: View {
                                 ProgressView()
                                     .scaleEffect(0.8)
                             }
-                            Text(isImporting ? "Importing…" : "Import")
+                            Text(isImporting ? "Importing…" : "Import and prefill")
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(importURL.isEmpty || isImporting)
-                    .accessibilityLabel("Import from URL")
+                    .accessibilityLabel("Import from URL and prefill form")
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 6)
+            }
+
+            if let summary = importSummary {
+                Section("Import summary") {
+                    HStack {
+                        summaryCell(title: "Fields prefilled", value: summary.fieldsPrefilled)
+                        summaryCell(title: "Links detected", value: summary.linksDetected)
+                        summaryCell(title: "Sections estimated", value: summary.sectionsEstimated)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Import summary: \(summary.fieldsPrefilled) fields prefilled, \(summary.linksDetected) links detected, \(summary.sectionsEstimated) sections estimated")
+                }
             }
 
             if projectToEdit == nil {
@@ -272,6 +292,18 @@ struct ProjectSubmissionView: View {
                 }
             }
         }
+    }
+
+    private func summaryCell(title: String, value: Int) -> some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.headline)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Basic Info
@@ -509,23 +541,50 @@ struct ProjectSubmissionView: View {
                 authenticated: true
             )
 
+            var fieldsPrefilled = 0
+
             // Only prefill empty fields
-            if title.isEmpty, let t = result.title { title = t }
-            if description.isEmpty, let d = result.description { description = d }
+            if title.isEmpty, let t = result.title, !t.isEmpty {
+                title = t
+                fieldsPrefilled += 1
+            }
+            if description.isEmpty, let d = result.description, !d.isEmpty {
+                description = d
+                fieldsPrefilled += 1
+            }
             if let s = result.status, let parsed = ProjectStatus(rawValue: s) {
                 status = parsed
+                fieldsPrefilled += 1
             }
-            if let start = result.gbStartDate, !start.isEmpty {
-                if let date = start.asDate { gbStartDate = date; showDatePickers = true }
+            if let start = result.gbStartDate, !start.isEmpty, let date = start.asDate {
+                gbStartDate = date
+                showDatePickers = true
+                fieldsPrefilled += 1
             }
-            if let end = result.gbEndDate, !end.isEmpty {
-                if let date = end.asDate { gbEndDate = date; showDatePickers = true }
+            if let end = result.gbEndDate, !end.isEmpty, let date = end.asDate {
+                gbEndDate = date
+                showDatePickers = true
+                fieldsPrefilled += 1
             }
 
             // Auto-generate slug if empty
             if slug.isEmpty && !title.isEmpty {
                 slug = generateSlug(from: title)
+                fieldsPrefilled += 1
             }
+
+            let linksDetected = result.links?.compactMap(\.url).filter { !$0.isEmpty }.count ?? 0
+            let sectionsEstimated = 1
+                + ((result.description?.isEmpty == false) ? 1 : 0)
+                + (linksDetected > 0 ? 1 : 0)
+                + ((result.tags?.isEmpty == false) ? 1 : 0)
+                + (((result.gbStartDate?.isEmpty == false) || (result.gbEndDate?.isEmpty == false)) ? 1 : 0)
+
+            importSummary = ImportSummary(
+                fieldsPrefilled: fieldsPrefilled,
+                linksDetected: linksDetected,
+                sectionsEstimated: sectionsEstimated
+            )
 
             // Move to basic info after import
             withAnimation { currentSection = 1 }

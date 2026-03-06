@@ -9,6 +9,7 @@ final class ProfileViewModel: @unchecked Sendable {
     var favorites: [Project] = []
     var collection: [Project] = []
     var unreadNotificationCount: Int = 0
+    var isMarkingAllRead = false
 
     private let api = APIClient.shared
 
@@ -90,6 +91,37 @@ final class ProfileViewModel: @unchecked Sendable {
                 await MainActor.run { self.collection = response.data }
             } catch {
                 // Silently fail
+            }
+        }
+    }
+
+    func markAllNotificationsAsRead() async {
+        guard !isMarkingAllRead else { return }
+        await MainActor.run { self.isMarkingAllRead = true }
+        defer { Task { @MainActor in self.isMarkingAllRead = false } }
+
+        let paths = [
+            "/api/v1/notifications/mark-all-read",
+            "/api/v1/notifications/read-all",
+            "/api/v1/notifications/mark_read"
+        ]
+
+        var succeeded = false
+        for path in paths {
+            do {
+                try await api.requestVoid(.post, path: path, authenticated: true)
+                succeeded = true
+                break
+            } catch {
+                continue
+            }
+        }
+
+        if succeeded {
+            await loadNotifications()
+        } else {
+            await MainActor.run {
+                self.error = "Couldn't mark all notifications as read right now."
             }
         }
     }

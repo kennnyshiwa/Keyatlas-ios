@@ -15,6 +15,14 @@ struct DiscoverView: View {
                     ErrorView(message: error) { await viewModel.loadAll() }
                 } else {
                     VStack(alignment: .leading, spacing: 24) {
+                        if !viewModel.recommendations.isEmpty {
+                            projectSection(title: viewModel.recommendationLabel, icon: "person.2.wave.2", projects: viewModel.recommendations)
+                        }
+
+                        if !viewModel.trendingThisWeek.isEmpty {
+                            projectSection(title: "Trending This Week", icon: "flame", projects: viewModel.trendingThisWeek)
+                        }
+
                         // New This Week
                         if !viewModel.newThisWeek.isEmpty {
                             projectSection(title: "New This Week", icon: "sparkles", projects: viewModel.newThisWeek)
@@ -136,8 +144,20 @@ struct CompactProjectCard: View {
                 .frame(width: 200, height: 130)
                 .clipped()
 
-            VStack(alignment: .leading, spacing: 4) {
-                StatusBadge(status: project.status)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    StatusBadge(status: project.status)
+                    Spacer()
+                    if project.isRecentlyUpdated {
+                        Text("Recently updated")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(.orange.opacity(0.16))
+                            .clipShape(Capsule())
+                    }
+                }
 
                 Text(project.title)
                     .font(.subheadline)
@@ -149,6 +169,13 @@ struct CompactProjectCard: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                HStack(spacing: 8) {
+                    statItem(icon: "person.2", value: project.followCount ?? 0)
+                    statItem(icon: "heart", value: project.favoriteCount ?? 0)
+                    statItem(icon: "bubble.left", value: project.commentCount)
+                }
+                .foregroundStyle(.secondary)
             }
             .padding(8)
         }
@@ -156,5 +183,15 @@ struct CompactProjectCard: View {
         .cardStyle()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(project.title), \(project.status.displayName)")
+    }
+
+    private func statItem(icon: String, value: Int) -> some View {
+        HStack(spacing: 2) {
+            Image(systemName: icon)
+                .font(.caption2)
+            Text("\(value)")
+                .font(.caption2)
+                .fontWeight(.medium)
+        }
     }
 }

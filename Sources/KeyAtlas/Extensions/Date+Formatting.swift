@@ -36,3 +36,30 @@ extension String {
         return date.formatted(date: .abbreviated, time: .omitted)
     }
 }
+
+extension Project {
+    var commentCount: Int {
+        comments?.count ?? 0
+    }
+
+    var isRecentlyUpdated: Bool {
+        guard let date = updatedAt.asDate else { return false }
+        return date >= Calendar.current.date(byAdding: .day, value: -14, to: Date())!
+    }
+
+    var trendingScore: Int {
+        let followScore = (followCount ?? 0) * 4
+        let favoriteScore = (favoriteCount ?? 0) * 3
+        let commentScore = commentCount * 2
+
+        let recentBoost: Int
+        if let updated = updatedAt.asDate,
+           let days = Calendar.current.dateComponents([.day], from: updated, to: Date()).day {
+            recentBoost = max(0, 14 - max(0, days))
+        } else {
+            recentBoost = 0
+        }
+
+        return followScore + favoriteScore + commentScore + recentBoost
+    }
+}

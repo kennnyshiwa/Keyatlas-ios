@@ -5,6 +5,7 @@ struct ProjectDetailView: View {
     let slug: String
     @State private var viewModel = ProjectDetailViewModel()
     @State private var showEditSheet = false
+    @State private var showFollowNotice = false
     @Environment(AuthService.self) private var authService
     @Environment(\.openURL) private var openURL
 
@@ -49,6 +50,31 @@ struct ProjectDetailView: View {
             }
         }
         .task { await viewModel.loadProject(slug: slug) }
+        .onChange(of: viewModel.followConfirmationMessage) { _, newValue in
+            guard newValue != nil else { return }
+            withAnimation(.easeInOut(duration: 0.2)) { showFollowNotice = true }
+            Task {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.2)) { showFollowNotice = false }
+                    viewModel.followConfirmationMessage = nil
+                }
+            }
+        }
+        .safeAreaInset(edge: .top) {
+            if showFollowNotice, let message = viewModel.followConfirmationMessage {
+                Text(message)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.thinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal)
+                    .accessibilityLabel("Follow confirmation: \(message)")
+            }
+        }
         .sheet(isPresented: $showEditSheet) {
             if let project = viewModel.project {
                 ProjectSubmissionView(projectToEdit: project)
@@ -210,15 +236,24 @@ struct ProjectDetailView: View {
 
             Spacer()
 
-            if let follows = project.followCount {
-                HStack(spacing: 4) {
-                    Image(systemName: "person.2")
-                    Text("\(follows)")
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                statPill(icon: "person.2", value: project.followCount ?? 0)
+                statPill(icon: "heart", value: project.favoriteCount ?? 0)
+                statPill(icon: "bubble.left", value: project.commentCount)
             }
         }
+    }
+
+    private func statPill(icon: String, value: Int) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.caption)
+            Text("\(value)")
+                .font(.caption)
+                .fontWeight(.medium)
+        }
+        .foregroundStyle(.secondary)
+        .accessibilityLabel("\(value) interactions")
     }
 
     // MARK: - Date chip

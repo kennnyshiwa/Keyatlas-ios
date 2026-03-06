@@ -9,6 +9,7 @@ final class ProjectDetailViewModel: @unchecked Sendable {
     var isTogglingFavorite = false
     var commentText = ""
     var isPostingComment = false
+    var followConfirmationMessage: String?
 
     private let api = APIClient.shared
 
@@ -59,6 +60,11 @@ final class ProjectDetailViewModel: @unchecked Sendable {
 
         do {
             try await api.requestVoid(method, path: "/api/v1/projects/\(project.slug)/follow")
+            if !isCurrentlyFollowing {
+                await MainActor.run {
+                    self.followConfirmationMessage = "Following. You'll get updates for status changes, GB ending soon, and shipping progress."
+                }
+            }
             await loadProject(slug: project.slug)
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
