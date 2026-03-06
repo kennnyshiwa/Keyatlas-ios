@@ -526,8 +526,7 @@ struct ProjectDetailView: View {
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             }
-                            Text(comment.content)
-                                .font(.subheadline)
+                            RichCommentView(content: comment.content)
                         }
                         .padding(.vertical, 4)
                         Divider()
