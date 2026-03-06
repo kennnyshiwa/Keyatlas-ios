@@ -104,7 +104,9 @@ struct ProjectListView: View {
     }
 
     private var projectList: some View {
-        ScrollView {
+        let hasHighlightLanes = !recommendedProjects.isEmpty || !trendingProjects.isEmpty
+
+        return ScrollView {
             LazyVStack(spacing: 16) {
                 if !recommendedProjects.isEmpty {
                     laneSection(title: recommendationLabel, projects: recommendedProjects)
@@ -112,6 +114,16 @@ struct ProjectListView: View {
 
                 if !trendingProjects.isEmpty {
                     laneSection(title: "Trending this week", projects: trendingProjects)
+                }
+
+                if hasHighlightLanes {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Divider()
+                        Text("All Projects")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 2)
                 }
 
                 ForEach(viewModel.projects) { project in
