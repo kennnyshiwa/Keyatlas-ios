@@ -144,6 +144,9 @@ struct ProjectDetailView: View {
             .clipped()
         }
         .navigationTitle("Project")
+        .refreshable {
+            await viewModel.loadProject(slug: slug)
+        }
     }
 
     // MARK: - Hero overlay
