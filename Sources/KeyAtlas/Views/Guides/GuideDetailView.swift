@@ -48,8 +48,7 @@ struct GuideDetailView: View {
                             }
 
                             if let content = guide.content {
-                                Text(content)
-                                    .font(.body)
+                                RichCommentView(content: content)
                             }
                         }
                         .padding()

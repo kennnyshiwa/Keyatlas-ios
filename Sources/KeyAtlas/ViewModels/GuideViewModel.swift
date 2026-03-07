@@ -26,8 +26,8 @@ final class GuideViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            let guide: Guide = try await api.request(path: "/api/v1/guides/\(slug)")
-            await MainActor.run { self.selectedGuide = guide }
+            let response: DataWrapper<Guide> = try await api.request(path: "/api/v1/guides/\(slug)")
+            await MainActor.run { self.selectedGuide = response.data }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }
