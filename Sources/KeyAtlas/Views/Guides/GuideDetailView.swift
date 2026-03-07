@@ -15,8 +15,8 @@ struct GuideDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         // Hero
-                        if guide.heroImageUrl != nil {
-                            CachedImage(url: guide.heroImageUrl)
+                        if guide.heroImage != nil {
+                            CachedImage(url: guide.heroImage)
                                 .frame(height: 200)
                                 .clipped()
                         }
@@ -38,17 +38,13 @@ struct GuideDetailView: View {
                                     .foregroundStyle(.secondary)
                             }
 
-                            if let tags = guide.tags, !tags.isEmpty {
-                                FlowLayout(spacing: 6) {
-                                    ForEach(tags, id: \.self) { tag in
-                                        Text(tag)
-                                            .font(.caption2)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 3)
-                                            .background(.quaternary)
-                                            .clipShape(Capsule())
-                                    }
-                                }
+                            if let difficulty = guide.difficulty {
+                                Text(difficulty)
+                                    .font(.caption2)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(.quaternary)
+                                    .clipShape(Capsule())
                             }
 
                             if let content = guide.content {

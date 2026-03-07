@@ -22,7 +22,7 @@ struct GuideListView: View {
                             GuideDetailView(slug: guide.slug)
                         } label: {
                             HStack(spacing: 12) {
-                                CachedImage(url: guide.heroImageUrl)
+                                CachedImage(url: guide.heroImage)
                                     .frame(width: 60, height: 60)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
@@ -30,11 +30,10 @@ struct GuideListView: View {
                                     Text(guide.title)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                    if let desc = guide.description {
-                                        Text(desc)
+                                    if let difficulty = guide.difficulty {
+                                        Text(difficulty)
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
-                                            .lineLimit(2)
                                     }
                                     if let author = guide.author {
                                         Text("by \(author.displayName)")
