@@ -59,6 +59,16 @@ private struct ProjectVendorEntry: Identifiable {
     var storeLink: String
 }
 
+// MARK: - Sound Test Entry
+
+private struct SoundTestEntry: Identifiable {
+    let id = UUID()
+    var title: String
+    var url: String
+    /// Non-nil for entries that already exist on the server (editing flow)
+    var serverId: String?
+}
+
 // MARK: - Keycap Profiles Response
 
 private struct KeycapProfilesResponse: Codable, Sendable {
@@ -114,12 +124,15 @@ struct ProjectSubmissionView: View {
     @State private var autosaveTask: Task<Void, Never>?
     @State private var showRestoreDraftAlert = false
 
+    // Sound tests
+    @State private var soundTestEntries: [SoundTestEntry] = []
+
     // Duplicate from existing project
     @State private var showDuplicateSheet = false
     @State private var userProjects: [Project] = []
     @State private var isLoadingUserProjects = false
 
-    private let sections = ["Import", "Basic Info", "Details", "Media", "Vendors", "Pricing & Dates"]
+    private let sections = ["Import", "Basic Info", "Details", "Media", "Vendors", "Pricing & Dates", "Sound Tests"]
 
     private var draftKey: String {
         if let slug = projectToEdit?.slug { return "draft-\(slug)" }
@@ -148,6 +161,15 @@ struct ProjectSubmissionView: View {
             _gbEndDate = State(initialValue: end)
         }
         _showDatePickers = State(initialValue: (projectToEdit?.gbStartDate?.asDate != nil) || (projectToEdit?.gbEndDate?.asDate != nil))
+        if let soundTests = projectToEdit?.soundTests {
+            _soundTestEntries = State(initialValue: soundTests.map { st in
+                SoundTestEntry(
+                    title: st.title ?? "",
+                    url: st.url,
+                    serverId: st.id
+                )
+            })
+        }
         if let vendors = projectToEdit?.vendors {
             _projectVendors = State(initialValue: vendors.map { pv in
                 ProjectVendorEntry(
@@ -193,6 +215,7 @@ struct ProjectSubmissionView: View {
                     mediaSection.tag(3)
                     vendorsSection.tag(4)
                     pricingSection.tag(5)
+                    soundTestsSection.tag(6)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -674,6 +697,49 @@ struct ProjectSubmissionView: View {
         }
     }
 
+    // MARK: - Sound Tests
+
+    private var soundTestsSection: some View {
+        Form {
+            Section {
+                Text("Add YouTube or Streamable links to showcase how this keyboard sounds.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            if !soundTestEntries.isEmpty {
+                Section("Sound Tests") {
+                    ForEach($soundTestEntries) { $entry in
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField("Title (optional)", text: $entry.title)
+                                .font(.subheadline)
+                                .accessibilityLabel("Sound test title")
+                            TextField("YouTube or Streamable URL", text: $entry.url)
+                                .keyboardType(.URL)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                                .font(.subheadline)
+                                .accessibilityLabel("Sound test URL")
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .onDelete { offsets in
+                        soundTestEntries.remove(atOffsets: offsets)
+                    }
+                }
+            }
+
+            Section {
+                Button {
+                    soundTestEntries.append(SoundTestEntry(title: "", url: ""))
+                } label: {
+                    Label("Add Sound Test", systemImage: "plus.circle")
+                }
+                .accessibilityLabel("Add a sound test")
+            }
+        }
+    }
+
     // MARK: - Actions
 
     private func loadCategories() async {
@@ -856,6 +922,12 @@ struct ProjectSubmissionView: View {
             let storeLink: String
         }
 
+        struct SoundTestSubmitEntry: Codable, Hashable, Sendable {
+            let url: String
+            let title: String?
+            let platform: String?
+        }
+
         // POST /api/projects uses schema field names
         struct CreateBody: Codable, Hashable, Sendable {
             let title: String
@@ -871,6 +943,7 @@ struct ProjectSubmissionView: View {
             let gbStartDate: String?
             let gbEndDate: String?
             let projectVendors: [VendorSubmitEntry]
+            let soundTests: [SoundTestSubmitEntry]
         }
 
         // PATCH /api/v1/projects/:slug uses snake_case field names
@@ -945,7 +1018,14 @@ struct ProjectSubmissionView: View {
                     priceMax: Int((Double(maxPrice) ?? 0) * 100),
                     gbStartDate: showDatePickers ? df.string(from: gbStartDate) : nil,
                     gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil,
-                    projectVendors: vendorEntries
+                    projectVendors: vendorEntries,
+                    soundTests: soundTestEntries
+                        .filter { !$0.url.trimmingCharacters(in: .whitespaces).isEmpty }
+                        .map { SoundTestSubmitEntry(
+                            url: $0.url.trimmingCharacters(in: .whitespaces),
+                            title: $0.title.isEmpty ? nil : $0.title,
+                            platform: detectPlatform(url: $0.url)
+                        )}
                 )
                 try await APIClient.shared.requestVoid(.post, path: "/api/projects", body: createBody)
                 targetSlug = slug
@@ -960,6 +1040,36 @@ struct ProjectSubmissionView: View {
                 )
             }
 
+            // Sync sound tests for editing flow (create already includes them in the body)
+            if let projectId = projectToEdit?.id {
+                // Delete removed sound tests
+                let originalIds = Set((projectToEdit?.soundTests ?? []).map(\.id))
+                let currentServerIds = Set(soundTestEntries.compactMap(\.serverId))
+                for removedId in originalIds.subtracting(currentServerIds) {
+                    _ = try? await APIClient.shared.requestVoid(
+                        .delete,
+                        path: "/api/projects/\(projectId)/sound-tests/\(removedId)"
+                    )
+                }
+                // Add new sound tests
+                struct SoundTestCreateBody: Codable, Sendable {
+                    let url: String
+                    let title: String?
+                    let platform: String?
+                }
+                for entry in soundTestEntries where entry.serverId == nil && !entry.url.trimmingCharacters(in: .whitespaces).isEmpty {
+                    _ = try? await APIClient.shared.requestVoid(
+                        .post,
+                        path: "/api/projects/\(projectId)/sound-tests",
+                        body: SoundTestCreateBody(
+                            url: entry.url.trimmingCharacters(in: .whitespaces),
+                            title: entry.title.isEmpty ? nil : entry.title,
+                            platform: detectPlatform(url: entry.url)
+                        )
+                    )
+                }
+            }
+
             // Clear autosave draft on success
             clearDraft()
             autosaveTask?.cancel()
@@ -967,6 +1077,12 @@ struct ProjectSubmissionView: View {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    private func detectPlatform(url: String) -> String {
+        if url.contains("youtube.com") || url.contains("youtu.be") { return "youtube" }
+        if url.contains("streamable.com") { return "streamable" }
+        return "other"
     }
 
     private func generateSlug(from text: String) -> String {
