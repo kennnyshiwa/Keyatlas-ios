@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 struct GuideDetailView: View {
     let slug: String
@@ -47,17 +48,87 @@ struct GuideDetailView: View {
                                     .clipShape(Capsule())
                             }
 
-                            if let content = guide.content {
-                                RichCommentView(content: content)
+                            if let content = guide.content, !content.isEmpty {
+                                HTMLContentView(html: content)
                             }
                         }
                         .padding()
                     }
                 }
+            } else {
+                ErrorView(message: "Unable to load guide") { await viewModel.loadGuide(slug: slug) }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadGuide(slug: slug) }
+    }
+}
+
+/// Renders HTML content using WKWebView with dynamic height
+struct HTMLContentView: UIViewRepresentable {
+    let html: String
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width - 32, height: 100), configuration: config)
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.isScrollEnabled = false
+        webView.navigationDelegate = context.coordinator
+        context.coordinator.webView = webView
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        let styledHTML = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                font-size: 16px;
+                line-height: 1.6;
+                color: #1a1a1a;
+                padding: 0;
+                -webkit-text-size-adjust: 100%;
+            }
+            @media (prefers-color-scheme: dark) {
+                body { color: #e5e5e5; }
+                h2, h3 { color: #ffffff; }
+            }
+            h2 { font-size: 20px; font-weight: 700; margin: 24px 0 12px 0; }
+            h3 { font-size: 17px; font-weight: 600; margin: 20px 0 8px 0; }
+            p { margin: 8px 0; }
+            ul, ol { margin: 8px 0; padding-left: 24px; }
+            li { margin: 4px 0; }
+            img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; }
+        </style>
+        </head>
+        <body>\(html)</body>
+        </html>
+        """
+        webView.loadHTMLString(styledHTML, baseURL: nil)
+    }
+
+    class Coordinator: NSObject, WKNavigationDelegate {
+        weak var webView: WKWebView?
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.evaluateJavaScript("document.body.scrollHeight") { [weak webView] result, _ in
+                guard let webView, let height = result as? CGFloat, height > 0 else { return }
+                DispatchQueue.main.async {
+                    webView.constraints.filter { $0.firstAttribute == .height }.forEach { webView.removeConstraint($0) }
+                    let constraint = webView.heightAnchor.constraint(equalToConstant: height)
+                    constraint.isActive = true
+                    webView.superview?.setNeedsLayout()
+                }
+            }
+        }
     }
 }
 
