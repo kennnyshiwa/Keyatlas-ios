@@ -4,8 +4,8 @@ import WebKit
 struct GuideDetailView: View {
     let slug: String
     @State private var viewModel = GuideViewModel()
+    @State private var showEditSheet = false
     @Environment(AuthService.self) private var authService
-    @Environment(\.openURL) private var openURL
 
     private var canEdit: Bool {
         guard let user = authService.currentUser,
@@ -69,15 +69,20 @@ struct GuideDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if canEdit {
+            if canEdit, let guide = viewModel.selectedGuide {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        if let url = URL(string: "https://keyatlas.io/guides/\(slug)/edit") {
-                            openURL(url)
-                        }
+                        showEditSheet = true
                     } label: {
                         Image(systemName: "pencil")
                     }
+                }
+            }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            if let guide = viewModel.selectedGuide {
+                GuideEditView(guide: guide) {
+                    Task { await viewModel.loadGuide(slug: slug) }
                 }
             }
         }

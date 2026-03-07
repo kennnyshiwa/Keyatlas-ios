@@ -11,6 +11,7 @@
 		05227F55A2FF14605CCD7185 /* AdminUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A8FA353C73396718E85949 /* AdminUsersView.swift */; };
 		07017F279B4B42EF277CFB48 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3C702BB3B0069FFCF50BA8 /* ProfileView.swift */; };
 		0C34A6562FF0B8F8D54AE718 /* GuideDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A61E73588C8B9A873066EB81 /* GuideDetailView.swift */; };
+		BBBB22220000000000000001 /* GuideEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBB11110000000000000001 /* GuideEditView.swift */; };
 		15DC321E8FD53F62A75DFD1A /* VendorListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4CEFA517DA58CDFE8170DD /* VendorListView.swift */; };
 		16DAE093CA8E424CED939D07 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B13838D6A1EDB9064C0AFB /* CalendarView.swift */; };
 		1B81D417635F974E145EF96D /* AdminProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66344143B803A25812B838E /* AdminProjectsView.swift */; };
@@ -122,6 +123,7 @@
 		9DDF54B00634351515BA1C48 /* OAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthService.swift; sourceTree = "<group>"; };
 		A21FF178C3C5B72F6D06C574 /* Vendor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vendor.swift; sourceTree = "<group>"; };
 		A61E73588C8B9A873066EB81 /* GuideDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideDetailView.swift; sourceTree = "<group>"; };
+		BBBB11110000000000000001 /* GuideEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideEditView.swift; sourceTree = "<group>"; };
 		AB5ED67CCDC8040159008C1E /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		B26340FE8C34C95A1A99649E /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		C20B8612719063657F42FE0A /* ForumViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumViewModel.swift; sourceTree = "<group>"; };
@@ -220,6 +222,7 @@
 			isa = PBXGroup;
 			children = (
 				A61E73588C8B9A873066EB81 /* GuideDetailView.swift */,
+				BBBB11110000000000000001 /* GuideEditView.swift */,
 				EE87B14DF9FF9F9478C04330 /* GuideListView.swift */,
 			);
 			path = Guides;
@@ -506,6 +509,7 @@
 				DBC6772293F8CF159CDDD3C6 /* ForumViewModel.swift in Sources */,
 				5DCDA2E8F3AFED86018D3EA1 /* Guide.swift in Sources */,
 				0C34A6562FF0B8F8D54AE718 /* GuideDetailView.swift in Sources */,
+				BBBB22220000000000000001 /* GuideEditView.swift in Sources */,
 				BF5E42BD7889705BB8B75DF0 /* GuideListView.swift in Sources */,
 				2AC4CE4954090294921DBAFB /* GuideViewModel.swift in Sources */,
 				446D1969C5328126311FE5CF /* ImageGallery.swift in Sources */,
