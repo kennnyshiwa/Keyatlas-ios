@@ -121,6 +121,34 @@ struct ProjectDetailView: View {
                 .clipped()
 
                 VStack(alignment: .leading, spacing: 20) {
+                    // Category & Profile tags
+                    if project.category != nil || (project.profile != nil && !project.profile!.isEmpty) {
+                        HStack(spacing: 8) {
+                            if let category = project.category {
+                                capsuleTag(category.name, icon: "tag", color: .blue)
+                            }
+                            if let profile = project.profile, !profile.isEmpty {
+                                capsuleTag(profile, icon: "cube", color: .purple)
+                            }
+                        }
+                    }
+
+                    // Tags
+                    if let tags = project.tags, !tags.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(tags, id: \.self) { tag in
+                                    Text(tag)
+                                        .font(.caption)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(.quaternary)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
+                    }
+
                     // Action buttons
                     actionRow(project)
 
@@ -183,6 +211,11 @@ struct ProjectDetailView: View {
 
                     // Comments
                     commentsSection(project)
+
+                    // Related projects
+                    if !viewModel.relatedProjects.isEmpty {
+                        relatedProjectsSection
+                    }
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -254,6 +287,20 @@ struct ProjectDetailView: View {
             .tint(project.isFavorited == true ? .red : .gray)
             .disabled(viewModel.isTogglingFavorite)
             .accessibilityLabel(project.isFavorited == true ? "Unfavorite" : "Favorite")
+
+            Button {
+                Task { await viewModel.toggleCollection() }
+            } label: {
+                Label(
+                    project.isInCollection == true ? "Collected" : "Collect",
+                    systemImage: project.isInCollection == true ? "tray.full.fill" : "tray.and.arrow.down"
+                )
+                .font(.subheadline)
+            }
+            .buttonStyle(.bordered)
+            .tint(project.isInCollection == true ? .orange : .gray)
+            .disabled(viewModel.isTogglingCollection)
+            .accessibilityLabel(project.isInCollection == true ? "Remove from collection" : "Add to collection")
 
             Spacer()
 
@@ -538,6 +585,51 @@ struct ProjectDetailView: View {
         guard let me = authService.currentUser?.id,
               let owner = project.designer?.id else { return false }
         return me == owner
+    }
+
+    // MARK: - Capsule tag
+
+    private func capsuleTag(_ text: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2)
+            Text(text)
+                .font(.caption)
+                .fontWeight(.semibold)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.15))
+        .foregroundStyle(color)
+        .clipShape(Capsule())
+    }
+
+    // MARK: - Related projects
+
+    private var relatedProjectsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Related Projects")
+                .font(.headline)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(viewModel.relatedProjects) { related in
+                        NavigationLink(value: related.slug) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                CachedImage(url: related.heroImageUrl, contentMode: .fill)
+                                    .frame(width: 160, height: 100)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                Text(related.title)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .lineLimit(2)
+                                    .foregroundStyle(.primary)
+                                    .frame(width: 160, alignment: .leading)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Links

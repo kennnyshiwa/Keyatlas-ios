@@ -198,6 +198,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let isFollowing: Bool?
     let isFavorited: Bool?
     let isFeatured: Bool?
+    let isInCollection: Bool?
     let published: Bool?
     let createdAt: String
     let updatedAt: String
@@ -214,6 +215,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
         case isFollowing = "is_following"
         case isFavorited = "is_favorited"
         case isFeatured = "is_featured"
+        case isInCollection = "is_in_collection"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

@@ -34,6 +34,16 @@ struct ProjectCardView: View {
                             .clipShape(Capsule())
                     }
                     Spacer()
+                    if let profile = project.profile, !profile.isEmpty {
+                        Text(profile)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(.purple.opacity(0.12))
+                            .foregroundStyle(.purple)
+                            .clipShape(Capsule())
+                    }
                     if let category = project.category {
                         Text(category.name)
                             .font(.caption)

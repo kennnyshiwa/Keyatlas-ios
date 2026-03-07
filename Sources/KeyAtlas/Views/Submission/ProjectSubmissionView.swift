@@ -356,16 +356,6 @@ struct ProjectSubmissionView: View {
                     }
             }
 
-            Section("Slug (URL)") {
-                TextField("project-slug", text: $slug)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .accessibilityLabel("Project URL slug")
-                Text("keyatlas.io/projects/\(slug)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
             Section("Status") {
                 Picker("Status", selection: $status) {
                     ForEach([ProjectStatus.interestCheck, .groupBuy], id: \.self) { s in

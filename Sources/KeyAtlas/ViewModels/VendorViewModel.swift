@@ -134,6 +134,7 @@ final class VendorDetailViewModel: @unchecked Sendable {
                     isFollowing: nil,
                     isFavorited: nil,
                     isFeatured: nil,
+                    isInCollection: nil,
                     published: nil,
                     createdAt: p.createdAt ?? nowISO,
                     updatedAt: p.updatedAt ?? nowISO

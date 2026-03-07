@@ -7,9 +7,11 @@ final class ProjectDetailViewModel: @unchecked Sendable {
     var error: String?
     var isTogglingFollow = false
     var isTogglingFavorite = false
+    var isTogglingCollection = false
     var commentText = ""
     var isPostingComment = false
     var followConfirmationMessage: String?
+    var relatedProjects: [Project] = []
 
     private let api = APIClient.shared
 
@@ -29,8 +31,22 @@ final class ProjectDetailViewModel: @unchecked Sendable {
                 authenticated: true
             )
             await MainActor.run { self.project = response.data }
+            // Load related projects in background
+            await loadRelatedProjects(slug: safeSlug)
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
+        }
+    }
+
+    func loadRelatedProjects(slug: String) async {
+        do {
+            let response: APIDataResponse<[Project]> = try await api.request(
+                path: "/api/v1/projects/\(slug)/related"
+            )
+            await MainActor.run { self.relatedProjects = response.data }
+        } catch {
+            // Non-critical — endpoint may not exist yet
+            await MainActor.run { self.relatedProjects = [] }
         }
     }
 
@@ -81,6 +97,22 @@ final class ProjectDetailViewModel: @unchecked Sendable {
 
         do {
             try await api.requestVoid(method, path: "/api/v1/projects/\(project.slug)/favorite")
+            await loadProject(slug: project.slug)
+        } catch {
+            await MainActor.run { self.error = error.localizedDescription }
+        }
+    }
+
+    func toggleCollection() async {
+        guard let project else { return }
+        await MainActor.run { self.isTogglingCollection = true }
+        defer { Task { @MainActor in self.isTogglingCollection = false } }
+
+        let isCurrentlyInCollection = project.isInCollection ?? false
+        let method: HTTPMethod = isCurrentlyInCollection ? .delete : .post
+
+        do {
+            try await api.requestVoid(method, path: "/api/v1/projects/\(project.slug)/collection")
             await loadProject(slug: project.slug)
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
