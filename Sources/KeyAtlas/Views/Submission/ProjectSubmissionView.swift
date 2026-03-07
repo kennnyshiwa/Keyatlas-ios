@@ -885,8 +885,8 @@ struct ProjectSubmissionView: View {
                     heroImageUrl: heroUrl,
                     profile: profile.isEmpty ? nil : profile,
                     estimatedDelivery: estimatedDelivery.isEmpty ? nil : estimatedDelivery,
-                    minPrice: Int((Double(minPrice) ?? 0) * 100),
-                    maxPrice: Int((Double(maxPrice) ?? 0) * 100),
+                    minPrice: minPrice.isEmpty ? nil : Int((Double(minPrice) ?? 0) * 100),
+                    maxPrice: maxPrice.isEmpty ? nil : Int((Double(maxPrice) ?? 0) * 100),
                     gbStartDate: showDatePickers ? df.string(from: gbStartDate) : nil,
                     gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil
                 )

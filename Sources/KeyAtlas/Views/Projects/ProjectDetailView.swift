@@ -96,7 +96,9 @@ struct ProjectDetailView: View {
                     .accessibilityLabel("Follow confirmation: \(message)")
             }
         }
-        .sheet(isPresented: $showEditSheet) {
+        .sheet(isPresented: $showEditSheet, onDismiss: {
+            Task { await viewModel.loadProject(slug: slug) }
+        }) {
             if let project = viewModel.project {
                 ProjectSubmissionView(projectToEdit: project)
             }
