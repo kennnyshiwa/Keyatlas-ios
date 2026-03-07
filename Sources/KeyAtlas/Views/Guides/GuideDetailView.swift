@@ -4,6 +4,14 @@ import WebKit
 struct GuideDetailView: View {
     let slug: String
     @State private var viewModel = GuideViewModel()
+    @Environment(AuthService.self) private var authService
+    @Environment(\.openURL) private var openURL
+
+    private var canEdit: Bool {
+        guard let user = authService.currentUser,
+              let guide = viewModel.selectedGuide else { return false }
+        return guide.author?.id == user.id || user.isAdmin
+    }
 
     var body: some View {
         Group {
@@ -60,6 +68,19 @@ struct GuideDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if canEdit {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        if let url = URL(string: "https://keyatlas.io/guides/\(slug)/edit") {
+                            openURL(url)
+                        }
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                }
+            }
+        }
         .task { await viewModel.loadGuide(slug: slug) }
     }
 }
