@@ -74,7 +74,28 @@ struct ProjectCategory: Codable, Identifiable, Hashable, Sendable {
         case projectCount = "project_count"
     }
 
+    /// Category labels matching the backend enum
+    private static let labels: [String: String] = [
+        "KEYBOARDS": "Keyboards",
+        "KEYCAPS": "Keycaps",
+        "SWITCHES": "Switches",
+        "DESKMATS": "Deskmats",
+        "ARTISANS": "Artisans",
+        "ACCESSORIES": "Accessories",
+    ]
+
     init(from decoder: Decoder) throws {
+        // Try decoding as a plain string first (project API returns enum string)
+        if let container = try? decoder.singleValueContainer(),
+           let raw = try? container.decode(String.self) {
+            id = raw
+            name = Self.labels[raw] ?? raw.capitalized
+            slug = raw.lowercased()
+            description = nil
+            projectCount = nil
+            return
+        }
+        // Otherwise decode as object (categories list API)
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
