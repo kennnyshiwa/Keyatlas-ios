@@ -261,69 +261,78 @@ struct ProjectDetailView: View {
     // MARK: - Action row
 
     private func actionRow(_ project: Project) -> some View {
-        HStack(spacing: 16) {
-            Button {
-                Task { await viewModel.toggleFollow() }
-            } label: {
-                Label(
-                    project.isFollowing == true ? "Following" : "Follow",
-                    systemImage: project.isFollowing == true ? "bell.fill" : "bell"
-                )
-                .font(.subheadline)
+        VStack(spacing: 10) {
+            // Buttons row
+            HStack(spacing: 12) {
+                Button {
+                    Task { await viewModel.toggleFollow() }
+                } label: {
+                    Label(
+                        project.isFollowing == true ? "Following" : "Follow",
+                        systemImage: project.isFollowing == true ? "bell.fill" : "bell"
+                    )
+                    .font(.subheadline)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(project.isFollowing == true ? .gray : .blue)
+                .disabled(viewModel.isTogglingFollow)
+                .accessibilityLabel(project.isFollowing == true ? "Unfollow project" : "Follow project")
+
+                Button {
+                    Task { await viewModel.toggleFavorite() }
+                } label: {
+                    Label(
+                        "Favorite",
+                        systemImage: project.isFavorited == true ? "heart.fill" : "heart"
+                    )
+                    .font(.subheadline)
+                }
+                .buttonStyle(.bordered)
+                .tint(project.isFavorited == true ? .red : .gray)
+                .disabled(viewModel.isTogglingFavorite)
+                .accessibilityLabel(project.isFavorited == true ? "Unfavorite" : "Favorite")
+
+                Button {
+                    Task { await viewModel.toggleCollection() }
+                } label: {
+                    Label(
+                        "Collect",
+                        systemImage: project.isInCollection == true ? "tray.full.fill" : "tray.and.arrow.down"
+                    )
+                    .font(.subheadline)
+                }
+                .buttonStyle(.bordered)
+                .tint(project.isInCollection == true ? .orange : .gray)
+                .disabled(viewModel.isTogglingCollection)
+                .accessibilityLabel(project.isInCollection == true ? "Remove from collection" : "Add to collection")
+
+                Spacer()
             }
-            .buttonStyle(.borderedProminent)
-            .tint(project.isFollowing == true ? .gray : .blue)
-            .disabled(viewModel.isTogglingFollow)
-            .accessibilityLabel(project.isFollowing == true ? "Unfollow project" : "Follow project")
 
-            Button {
-                Task { await viewModel.toggleFavorite() }
-            } label: {
-                Label(
-                    "\(project.favoriteCount ?? 0)",
-                    systemImage: project.isFavorited == true ? "heart.fill" : "heart"
-                )
-                .font(.subheadline)
-            }
-            .buttonStyle(.bordered)
-            .tint(project.isFavorited == true ? .red : .gray)
-            .disabled(viewModel.isTogglingFavorite)
-            .accessibilityLabel(project.isFavorited == true ? "Unfavorite" : "Favorite")
-
-            Button {
-                Task { await viewModel.toggleCollection() }
-            } label: {
-                Label(
-                    project.isInCollection == true ? "Collected" : "Collect",
-                    systemImage: project.isInCollection == true ? "tray.full.fill" : "tray.and.arrow.down"
-                )
-                .font(.subheadline)
-            }
-            .buttonStyle(.bordered)
-            .tint(project.isInCollection == true ? .orange : .gray)
-            .disabled(viewModel.isTogglingCollection)
-            .accessibilityLabel(project.isInCollection == true ? "Remove from collection" : "Add to collection")
-
-            Spacer()
-
-            HStack(spacing: 10) {
-                statPill(icon: "person.2", value: project.followCount ?? 0)
-                statPill(icon: "heart", value: project.favoriteCount ?? 0)
-                statPill(icon: "bubble.left", value: project.commentCount)
+            // Stats row
+            HStack(spacing: 16) {
+                statPill(icon: "person.2", label: "followers", value: project.followCount ?? 0)
+                statPill(icon: "heart", label: "favorites", value: project.favoriteCount ?? 0)
+                statPill(icon: "bubble.left", label: "comments", value: project.commentCount)
+                Spacer()
             }
         }
     }
 
-    private func statPill(icon: String, value: Int) -> some View {
+    private func statPill(icon: String, label: String = "", value: Int) -> some View {
         HStack(spacing: 3) {
             Image(systemName: icon)
                 .font(.caption)
             Text("\(value)")
                 .font(.caption)
                 .fontWeight(.medium)
+            if !label.isEmpty {
+                Text(label)
+                    .font(.caption)
+            }
         }
         .foregroundStyle(.secondary)
-        .accessibilityLabel("\(value) interactions")
+        .accessibilityLabel("\(value) \(label.isEmpty ? "interactions" : label)")
     }
 
     // MARK: - Date chip
