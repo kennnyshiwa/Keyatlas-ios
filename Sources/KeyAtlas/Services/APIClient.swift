@@ -57,6 +57,7 @@ actor APIClient {
         }
 
         if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(body)
         }
 

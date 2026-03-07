@@ -99,14 +99,20 @@ struct GuideEditView: View {
         error = nil
 
         do {
-            let body: [String: String?] = [
-                "title": title.trimmingCharacters(in: .whitespaces),
-                "content": content,
-                "difficulty": difficulty,
-                "heroImage": heroImage.isEmpty ? nil : heroImage,
-            ]
+            let body: [String: String] = {
+                var d: [String: String] = [
+                    "title": title.trimmingCharacters(in: .whitespaces),
+                    "content": content,
+                    "difficulty": difficulty,
+                ]
+                if !heroImage.isEmpty {
+                    d["heroImage"] = heroImage
+                }
+                return d
+            }()
 
-            try await api.requestVoid(
+            // Use the generic request so we can ignore the response shape
+            let _: EmptyResponse = try await api.request(
                 .put,
                 path: "/api/guides/\(guide.id)",
                 body: body,
