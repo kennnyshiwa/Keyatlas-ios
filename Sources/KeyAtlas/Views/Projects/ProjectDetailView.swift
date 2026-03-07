@@ -206,6 +206,11 @@ struct ProjectDetailView: View {
                         updatesSection(updates)
                     }
 
+                    // Sound Tests
+                    if let soundTests = project.soundTests, !soundTests.isEmpty {
+                        soundTestsSection(soundTests)
+                    }
+
                     // Links
                     if let links = project.links, !links.isEmpty {
                         linksSection(links)
@@ -638,6 +643,44 @@ struct ProjectDetailView: View {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // MARK: - Sound Tests
+
+    private func soundTestsSection(_ soundTests: [SoundTest]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sound Tests")
+                .font(.headline)
+            ForEach(soundTests) { test in
+                if let url = URL(string: test.url) {
+                    Button {
+                        openURL(url)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(.blue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(test.title ?? "Sound Test")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                if let platform = test.platform, !platform.isEmpty {
+                                    Text(platform)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .accessibilityLabel("Play sound test: \(test.title ?? "Sound Test")")
                 }
             }
         }

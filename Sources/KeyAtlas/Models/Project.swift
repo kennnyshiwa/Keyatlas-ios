@@ -191,6 +191,14 @@ struct Comment: Codable, Identifiable, Hashable, Sendable {
     }
 }
 
+/// Sound test entry
+struct SoundTest: Codable, Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String?
+    let url: String
+    let platform: String?
+}
+
 /// The main Project model
 struct Project: Codable, Identifiable, Hashable, Sendable {
     let id: String
@@ -211,6 +219,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let comments: [Comment]?
     let tags: [String]?
     let links: [ProjectLink]?
+    let soundTests: [SoundTest]?
     let estimatedDelivery: String?
     let gbStartDate: String?
     let gbEndDate: String?
@@ -226,6 +235,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case id, title, slug, description, status, category, tags, links, vendors, gallery, timeline, updates, comments, designer, pricing, published, profile
+        case soundTests = "sound_tests"
         case heroImageUrl = "hero_image_url"
         case categoryId = "category_id"
         case estimatedDelivery = "estimated_delivery"

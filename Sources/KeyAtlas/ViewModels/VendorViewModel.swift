@@ -126,6 +126,7 @@ final class VendorDetailViewModel: @unchecked Sendable {
                     comments: nil,
                     tags: nil,
                     links: nil,
+                    soundTests: nil,
                     estimatedDelivery: nil,
                     gbStartDate: nil,
                     gbEndDate: nil,
