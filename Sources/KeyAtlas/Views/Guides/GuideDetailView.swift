@@ -49,7 +49,7 @@ struct GuideDetailView: View {
                             }
 
                             if let content = guide.content, !content.isEmpty {
-                                HTMLContentView(html: content)
+                                DynamicHTMLView(html: content)
                             }
                         }
                         .padding()
@@ -64,20 +64,31 @@ struct GuideDetailView: View {
     }
 }
 
-/// Renders HTML content using WKWebView with dynamic height
-struct HTMLContentView: UIViewRepresentable {
+/// SwiftUI wrapper that renders HTML in a WKWebView with dynamic height
+struct DynamicHTMLView: View {
     let html: String
+    @State private var contentHeight: CGFloat = 100
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    var body: some View {
+        HTMLWebView(html: html, contentHeight: $contentHeight)
+            .frame(height: contentHeight)
+    }
+}
+
+struct HTMLWebView: UIViewRepresentable {
+    let html: String
+    @Binding var contentHeight: CGFloat
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width - 32, height: 100), configuration: config)
+        let webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
         webView.backgroundColor = .clear
         webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bounces = false
         webView.navigationDelegate = context.coordinator
-        context.coordinator.webView = webView
         return webView
     }
 
@@ -116,16 +127,17 @@ struct HTMLContentView: UIViewRepresentable {
     }
 
     class Coordinator: NSObject, WKNavigationDelegate {
-        weak var webView: WKWebView?
+        let parent: HTMLWebView
+        init(parent: HTMLWebView) { self.parent = parent }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            webView.evaluateJavaScript("document.body.scrollHeight") { [weak webView] result, _ in
-                guard let webView, let height = result as? CGFloat, height > 0 else { return }
-                DispatchQueue.main.async {
-                    webView.constraints.filter { $0.firstAttribute == .height }.forEach { webView.removeConstraint($0) }
-                    let constraint = webView.heightAnchor.constraint(equalToConstant: height)
-                    constraint.isActive = true
-                    webView.superview?.setNeedsLayout()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                webView.evaluateJavaScript("document.body.scrollHeight") { [weak self] result, _ in
+                    if let height = result as? CGFloat, height > 0 {
+                        DispatchQueue.main.async {
+                            self?.parent.contentHeight = height
+                        }
+                    }
                 }
             }
         }
