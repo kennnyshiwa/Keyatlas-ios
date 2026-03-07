@@ -6,8 +6,11 @@ struct CachedImage: View {
     let url: String?
     var contentMode: ContentMode = .fill
 
+    /// Resolve relative paths (e.g. "/uploads/...") against the API base URL.
+    private static let baseURL = URL(string: "https://keyatlas.io")!
+
     var body: some View {
-        if let urlString = url, let imageURL = URL(string: urlString) {
+        if let urlString = url, let imageURL = Self.resolveURL(urlString) {
             LazyImage(url: imageURL) { state in
                 if let image = state.image {
                     image
@@ -23,6 +26,14 @@ struct CachedImage: View {
         } else {
             placeholder
         }
+    }
+
+    private static func resolveURL(_ string: String) -> URL? {
+        if let url = URL(string: string), url.scheme != nil {
+            return url
+        }
+        // Relative path — resolve against base
+        return URL(string: string, relativeTo: baseURL)
     }
 
     private var placeholder: some View {
