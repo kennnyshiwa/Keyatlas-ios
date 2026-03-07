@@ -116,6 +116,7 @@ final class VendorDetailViewModel: @unchecked Sendable {
                     heroImageUrl: p.heroImage,
                     category: nil,
                     categoryId: nil,
+                    profile: nil,
                     designer: nil,
                     pricing: nil,
                     vendors: nil,

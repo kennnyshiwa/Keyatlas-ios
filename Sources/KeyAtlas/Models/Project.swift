@@ -180,6 +180,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let heroImageUrl: String?
     let category: ProjectCategory?
     let categoryId: String?
+    let profile: String?
     let designer: UserSummary?
     let pricing: ProjectPricing?
     let vendors: [ProjectVendor]?
@@ -202,7 +203,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, title, slug, description, status, category, tags, links, vendors, gallery, timeline, updates, comments, designer, pricing, published
+        case id, title, slug, description, status, category, tags, links, vendors, gallery, timeline, updates, comments, designer, pricing, published, profile
         case heroImageUrl = "hero_image_url"
         case categoryId = "category_id"
         case estimatedDelivery = "estimated_delivery"

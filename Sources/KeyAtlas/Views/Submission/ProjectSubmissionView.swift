@@ -49,6 +49,22 @@ private struct URLImportResponse: Codable, Sendable {
     }
 }
 
+// MARK: - Vendor Entry
+
+private struct ProjectVendorEntry: Identifiable {
+    let id = UUID()
+    var vendorId: String
+    var vendorName: String
+    var region: String
+    var storeLink: String
+}
+
+// MARK: - Keycap Profiles Response
+
+private struct KeycapProfilesResponse: Codable, Sendable {
+    let profiles: [String]
+}
+
 // MARK: - Submission View
 
 struct ProjectSubmissionView: View {
@@ -67,12 +83,18 @@ struct ProjectSubmissionView: View {
     @State private var gbEndDate = Date()
     @State private var showDatePickers = false
 
+    @State private var profile = ""
+    @State private var profiles: [String] = []
+
     @State private var heroPhoto: PhotosPickerItem?
     @State private var heroImageData: Data?
     @State private var galleryPhotos: [PhotosPickerItem] = []
     @State private var galleryData: [Data] = []
 
     @State private var categories: [ProjectCategory] = []
+    @State private var availableVendors: [Vendor] = []
+    @State private var projectVendors: [ProjectVendorEntry] = []
+    @State private var showAddVendorSheet = false
     @State private var isSubmitting = false
     @State private var error: String?
     @State private var currentSection = 0
@@ -97,7 +119,7 @@ struct ProjectSubmissionView: View {
     @State private var userProjects: [Project] = []
     @State private var isLoadingUserProjects = false
 
-    private let sections = ["Import", "Basic Info", "Details", "Media", "Pricing & Dates"]
+    private let sections = ["Import", "Basic Info", "Details", "Media", "Vendors", "Pricing & Dates"]
 
     private var draftKey: String {
         if let slug = projectToEdit?.slug { return "draft-\(slug)" }
@@ -111,12 +133,23 @@ struct ProjectSubmissionView: View {
         _description = State(initialValue: projectToEdit?.description?.keyAtlasDisplayText ?? "")
         _status = State(initialValue: projectToEdit?.status ?? .interestCheck)
         _categoryId = State(initialValue: projectToEdit?.categoryId ?? "")
+        _profile = State(initialValue: projectToEdit?.profile ?? "")
         _estimatedDelivery = State(initialValue: projectToEdit?.estimatedDelivery ?? "")
         if let min = projectToEdit?.pricing?.minPrice {
             _minPrice = State(initialValue: String(Double(min) / 100.0))
         }
         if let max = projectToEdit?.pricing?.maxPrice {
             _maxPrice = State(initialValue: String(Double(max) / 100.0))
+        }
+        if let vendors = projectToEdit?.vendors {
+            _projectVendors = State(initialValue: vendors.map { pv in
+                ProjectVendorEntry(
+                    vendorId: pv.vendor?.id ?? pv.id,
+                    vendorName: pv.vendor?.name ?? "Unknown",
+                    region: pv.region ?? "",
+                    storeLink: pv.url ?? ""
+                )
+            })
         }
     }
 
@@ -151,7 +184,8 @@ struct ProjectSubmissionView: View {
                     basicInfoSection.tag(1)
                     detailsSection.tag(2)
                     mediaSection.tag(3)
-                    pricingSection.tag(4)
+                    vendorsSection.tag(4)
+                    pricingSection.tag(5)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -188,6 +222,8 @@ struct ProjectSubmissionView: View {
             }
             .task {
                 await loadCategories()
+                await loadProfiles()
+                await loadVendors()
                 checkForSavedDraft()
             }
             .alert("Restore Draft?", isPresented: $showRestoreDraftAlert) {
@@ -349,6 +385,16 @@ struct ProjectSubmissionView: View {
                 .accessibilityLabel("Project category")
             }
 
+            Section("Profile") {
+                Picker("Profile", selection: $profile) {
+                    Text("None").tag("")
+                    ForEach(profiles, id: \.self) { p in
+                        Text(p).tag(p)
+                    }
+                }
+                .accessibilityLabel("Keycap profile")
+            }
+
             if let error {
                 Section {
                     Text(error).foregroundStyle(.red)
@@ -461,6 +507,98 @@ struct ProjectSubmissionView: View {
         }
     }
 
+    // MARK: - Vendors
+
+    private var vendorsSection: some View {
+        Form {
+            Section {
+                if projectVendors.isEmpty {
+                    Text("No vendors added yet.")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                } else {
+                    ForEach($projectVendors) { $entry in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(entry.vendorName)
+                                .font(.headline)
+                            TextField("Region (e.g. NA, EU, Asia)", text: $entry.region)
+                                .font(.subheadline)
+                                .accessibilityLabel("Vendor region")
+                            TextField("Store link (URL)", text: $entry.storeLink)
+                                .keyboardType(.URL)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                                .font(.subheadline)
+                                .accessibilityLabel("Vendor store link")
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .onDelete { offsets in
+                        projectVendors.remove(atOffsets: offsets)
+                    }
+                }
+            } header: {
+                Text("Vendors")
+            }
+
+            Section {
+                Button {
+                    showAddVendorSheet = true
+                } label: {
+                    Label("Add Vendor", systemImage: "plus.circle")
+                }
+                .accessibilityLabel("Add a vendor")
+            }
+        }
+        .sheet(isPresented: $showAddVendorSheet) {
+            addVendorPickerView
+        }
+    }
+
+    private var addVendorPickerView: some View {
+        NavigationStack {
+            Group {
+                if availableVendors.isEmpty {
+                    ProgressView("Loading vendors…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List(availableVendors) { vendor in
+                        Button {
+                            let entry = ProjectVendorEntry(
+                                vendorId: vendor.id,
+                                vendorName: vendor.name,
+                                region: "",
+                                storeLink: ""
+                            )
+                            projectVendors.append(entry)
+                            showAddVendorSheet = false
+                        } label: {
+                            HStack {
+                                Text(vendor.name)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if projectVendors.contains(where: { $0.vendorId == vendor.id }) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .disabled(projectVendors.contains(where: { $0.vendorId == vendor.id }))
+                        .accessibilityLabel("Select \(vendor.name)")
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Select Vendor")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showAddVendorSheet = false }
+                }
+            }
+        }
+    }
+
     // MARK: - Duplicate Picker Sheet
 
     private var duplicatePickerView: some View {
@@ -524,6 +662,30 @@ struct ProjectSubmissionView: View {
             if let cats: [ProjectCategory] = try? await APIClient.shared.request(path: "/api/v1/categories") {
                 categories = cats
             }
+        }
+    }
+
+    private func loadProfiles() async {
+        do {
+            let response: KeycapProfilesResponse = try await APIClient.shared.request(
+                path: "/api/keycap-profiles"
+            )
+            profiles = response.profiles
+        } catch {
+            // Non-critical, silently fail
+        }
+    }
+
+    private func loadVendors() async {
+        do {
+            let response: PaginatedResponse<Vendor> = try await APIClient.shared.request(
+                path: "/api/v1/vendors",
+                query: ["limit": "200"],
+                authenticated: true
+            )
+            availableVendors = response.data
+        } catch {
+            // Non-critical, silently fail
         }
     }
 
@@ -663,13 +825,37 @@ struct ProjectSubmissionView: View {
         }
 
         // Build submission body
-        struct SubmitBody: Codable, Hashable, Sendable {
+        struct VendorSubmitEntry: Codable, Hashable, Sendable {
+            let vendorId: String
+            let region: String
+            let storeLink: String
+        }
+
+        // POST /api/projects uses schema field names
+        struct CreateBody: Codable, Hashable, Sendable {
             let title: String
             let slug: String
             let description: String?
             let status: String
+            let category: String?
+            let heroImage: String?
+            let profile: String?
+            let estimatedDelivery: String?
+            let priceMin: Int?
+            let priceMax: Int?
+            let gbStartDate: String?
+            let gbEndDate: String?
+            let projectVendors: [VendorSubmitEntry]
+        }
+
+        // PATCH /api/v1/projects/:slug uses snake_case field names
+        struct UpdateBody: Codable, Hashable, Sendable {
+            let title: String
+            let description: String?
+            let status: String
             let categoryId: String?
             let heroImageUrl: String?
+            let profile: String?
             let estimatedDelivery: String?
             let minPrice: Int?
             let maxPrice: Int?
@@ -677,7 +863,7 @@ struct ProjectSubmissionView: View {
             let gbEndDate: String?
 
             enum CodingKeys: String, CodingKey {
-                case title, slug, description, status
+                case title, description, status, profile
                 case categoryId = "category_id"
                 case heroImageUrl = "hero_image_url"
                 case estimatedDelivery = "estimated_delivery"
@@ -691,25 +877,47 @@ struct ProjectSubmissionView: View {
         let df = ISO8601DateFormatter()
         df.formatOptions = [.withFullDate]
 
-        let body = SubmitBody(
-            title: title,
-            slug: slug,
-            description: description.isEmpty ? nil : description,
-            status: status.rawValue,
-            categoryId: categoryId.isEmpty ? nil : categoryId,
-            heroImageUrl: heroUrl,
-            estimatedDelivery: estimatedDelivery.isEmpty ? nil : estimatedDelivery,
-            minPrice: Int((Double(minPrice) ?? 0) * 100),
-            maxPrice: Int((Double(maxPrice) ?? 0) * 100),
-            gbStartDate: showDatePickers ? df.string(from: gbStartDate) : nil,
-            gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil
-        )
+        let vendorEntries = projectVendors.map { entry in
+            VendorSubmitEntry(
+                vendorId: entry.vendorId,
+                region: entry.region,
+                storeLink: entry.storeLink
+            )
+        }
 
         do {
             if let editSlug = projectToEdit?.slug {
-                try await APIClient.shared.requestVoid(.patch, path: "/api/v1/projects/\(editSlug)", body: body)
+                let updateBody = UpdateBody(
+                    title: title,
+                    description: description.isEmpty ? nil : description,
+                    status: status.rawValue,
+                    categoryId: categoryId.isEmpty ? nil : categoryId,
+                    heroImageUrl: heroUrl,
+                    profile: profile.isEmpty ? nil : profile,
+                    estimatedDelivery: estimatedDelivery.isEmpty ? nil : estimatedDelivery,
+                    minPrice: Int((Double(minPrice) ?? 0) * 100),
+                    maxPrice: Int((Double(maxPrice) ?? 0) * 100),
+                    gbStartDate: showDatePickers ? df.string(from: gbStartDate) : nil,
+                    gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil
+                )
+                try await APIClient.shared.requestVoid(.patch, path: "/api/v1/projects/\(editSlug)", body: updateBody)
             } else {
-                try await APIClient.shared.requestVoid(.post, path: "/api/v1/projects", body: body)
+                let createBody = CreateBody(
+                    title: title,
+                    slug: slug,
+                    description: description.isEmpty ? nil : description,
+                    status: status.rawValue,
+                    category: categoryId.isEmpty ? nil : categoryId,
+                    heroImage: heroUrl,
+                    profile: profile.isEmpty ? nil : profile,
+                    estimatedDelivery: estimatedDelivery.isEmpty ? nil : estimatedDelivery,
+                    priceMin: Int((Double(minPrice) ?? 0) * 100),
+                    priceMax: Int((Double(maxPrice) ?? 0) * 100),
+                    gbStartDate: showDatePickers ? df.string(from: gbStartDate) : nil,
+                    gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil,
+                    projectVendors: vendorEntries
+                )
+                try await APIClient.shared.requestVoid(.post, path: "/api/projects", body: createBody)
 
                 // Upload gallery images for new project only
                 for data in galleryData {
