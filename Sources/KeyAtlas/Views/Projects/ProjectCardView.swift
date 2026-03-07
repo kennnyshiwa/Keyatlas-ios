@@ -22,18 +22,25 @@ struct ProjectCardView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 // Status + Category row
-                HStack {
-                    StatusBadge(status: project.status)
+                HStack(alignment: .top, spacing: 6) {
+                    compactBadge(
+                        title: project.status.displayName,
+                        icon: project.status.iconName,
+                        foreground: Color.forStatus(project.status),
+                        background: Color.forStatus(project.status).opacity(0.15)
+                    )
+
                     if project.isRecentlyUpdated {
-                        Text("Recently updated")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(.orange.opacity(0.16))
-                            .clipShape(Capsule())
+                        compactBadge(
+                            title: "Recently updated",
+                            icon: nil,
+                            foreground: .orange,
+                            background: .orange.opacity(0.16)
+                        )
                     }
-                    Spacer()
+
+                    Spacer(minLength: 4)
+
                     if let profile = project.profile, !profile.isEmpty {
                         Text(profile)
                             .font(.caption2)
@@ -116,5 +123,27 @@ struct ProjectCardView: View {
                 .font(.caption)
                 .fontWeight(.medium)
         }
+    }
+
+    private func compactBadge(title: String, icon: String?, foreground: Color, background: Color) -> some View {
+        HStack(spacing: 4) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.caption2)
+            }
+            Text(title)
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(foreground)
+        .frame(minHeight: 26)
+        .frame(width: 72)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(background)
+        .clipShape(Capsule())
     }
 }
