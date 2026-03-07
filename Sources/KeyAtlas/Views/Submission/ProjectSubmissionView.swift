@@ -141,6 +141,13 @@ struct ProjectSubmissionView: View {
         if let max = projectToEdit?.pricing?.maxPrice {
             _maxPrice = State(initialValue: String(Double(max) / 100.0))
         }
+        if let start = projectToEdit?.gbStartDate?.asDate {
+            _gbStartDate = State(initialValue: start)
+        }
+        if let end = projectToEdit?.gbEndDate?.asDate {
+            _gbEndDate = State(initialValue: end)
+        }
+        _showDatePickers = State(initialValue: (projectToEdit?.gbStartDate?.asDate != nil) || (projectToEdit?.gbEndDate?.asDate != nil))
         if let vendors = projectToEdit?.vendors {
             _projectVendors = State(initialValue: vendors.map { pv in
                 ProjectVendorEntry(
@@ -422,6 +429,11 @@ struct ProjectSubmissionView: View {
                         .frame(height: 150)
                         .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else if let existingHero = projectToEdit?.heroImageUrl, !existingHero.isEmpty {
+                    CachedImage(url: existingHero, contentMode: .fill)
+                        .frame(height: 150)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
 
                 PhotosPicker(selection: $heroPhoto, matching: .images) {
@@ -431,15 +443,38 @@ struct ProjectSubmissionView: View {
             }
 
             Section("Gallery") {
-                if !galleryData.isEmpty {
-                    ScrollView(.horizontal) {
-                        HStack {
-                            ForEach(galleryData.indices, id: \.self) { i in
-                                if let img = UIImage(data: galleryData[i]) {
-                                    Image(uiImage: img)
-                                        .resizable()
+                if let existingGallery = projectToEdit?.gallery, !existingGallery.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Current Gallery")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 8) {
+                                ForEach(existingGallery) { item in
+                                    CachedImage(url: item.url, contentMode: .fill)
                                         .frame(width: 80, height: 80)
                                         .clipShape(RoundedRectangle(cornerRadius: 6))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !galleryData.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("New Images")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 8) {
+                                ForEach(galleryData.indices, id: \.self) { i in
+                                    if let img = UIImage(data: galleryData[i]) {
+                                        Image(uiImage: img)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 80, height: 80)
+                                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    }
                                 }
                             }
                         }
@@ -864,8 +899,11 @@ struct ProjectSubmissionView: View {
             }
         }
 
-        let df = ISO8601DateFormatter()
-        df.formatOptions = [.withFullDate]
+        let df = DateFormatter()
+        df.calendar = Calendar(identifier: .gregorian)
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone.current
+        df.dateFormat = "yyyy-MM-dd"
 
         let vendorEntries = projectVendors.map { entry in
             VendorSubmitEntry(
@@ -876,6 +914,7 @@ struct ProjectSubmissionView: View {
         }
 
         do {
+            let targetSlug: String
             if let editSlug = projectToEdit?.slug {
                 let updateBody = UpdateBody(
                     title: title,
@@ -891,6 +930,7 @@ struct ProjectSubmissionView: View {
                     gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil
                 )
                 try await APIClient.shared.requestVoid(.patch, path: "/api/v1/projects/\(editSlug)", body: updateBody)
+                targetSlug = editSlug
             } else {
                 let createBody = CreateBody(
                     title: title,
@@ -908,15 +948,16 @@ struct ProjectSubmissionView: View {
                     projectVendors: vendorEntries
                 )
                 try await APIClient.shared.requestVoid(.post, path: "/api/projects", body: createBody)
+                targetSlug = slug
+            }
 
-                // Upload gallery images for new project only
-                for data in galleryData {
-                    _ = try? await APIClient.shared.upload(
-                        path: "/api/v1/projects/\(slug)/gallery",
-                        imageData: data,
-                        filename: "gallery-\(UUID().uuidString).jpg"
-                    )
-                }
+            // Upload any newly selected gallery images (works for create + edit)
+            for data in galleryData {
+                _ = try? await APIClient.shared.upload(
+                    path: "/api/v1/projects/\(targetSlug)/gallery",
+                    imageData: data,
+                    filename: "gallery-\(UUID().uuidString).jpg"
+                )
             }
 
             // Clear autosave draft on success
