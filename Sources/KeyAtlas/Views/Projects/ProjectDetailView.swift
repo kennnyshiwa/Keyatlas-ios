@@ -362,7 +362,7 @@ struct ProjectDetailView: View {
     @ViewBuilder
     private func descriptionContent(_ raw: String) -> some View {
         let segments = descriptionSegments(from: raw)
-        LazyVStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
             ForEach(segments) { segment in
                 switch segment.kind {
                 case .text(let text):
