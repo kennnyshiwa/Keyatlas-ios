@@ -362,7 +362,7 @@ struct ProjectDetailView: View {
     @ViewBuilder
     private func descriptionContent(_ raw: String) -> some View {
         let segments = descriptionSegments(from: raw)
-        VStack(alignment: .leading, spacing: 10) {
+        LazyVStack(alignment: .leading, spacing: 10) {
             ForEach(segments) { segment in
                 switch segment.kind {
                 case .text(let text):
@@ -377,7 +377,7 @@ struct ProjectDetailView: View {
                             .minimumScaleFactor(0.92)
                     }
                 case .image(let url):
-                    CachedImage(url: url, contentMode: .fit)
+                    CachedImage(url: url, contentMode: .fit, targetSize: CGSize(width: 400, height: 340), priority: .low)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 120, maxHeight: 340)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -576,8 +576,6 @@ struct ProjectDetailView: View {
         var components = URLComponents(string: "https://keyatlas.io/projects/\(project.slug)")!
         components.queryItems = [
             URLQueryItem(name: "ref", value: ref),
-            URLQueryItem(name: "utm_source", value: ref),
-            URLQueryItem(name: "utm_campaign", value: "project_share_ios")
         ]
         return components.url ?? URL(string: "https://keyatlas.io/projects/\(project.slug)")!
     }
