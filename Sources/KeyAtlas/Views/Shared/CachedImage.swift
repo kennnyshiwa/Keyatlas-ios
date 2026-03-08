@@ -7,7 +7,7 @@ struct CachedImage: View {
     var contentMode: ContentMode = .fill
 
     /// Resolve relative paths (e.g. "/uploads/...") against the API base URL.
-    private static let baseURL = URL(string: "https://keyatlas.io")!
+    static let baseURL = URL(string: "https://keyatlas.io")!
 
     var body: some View {
         if let urlString = url, let imageURL = Self.resolveURL(urlString) {
@@ -28,7 +28,7 @@ struct CachedImage: View {
         }
     }
 
-    private static func resolveURL(_ string: String) -> URL? {
+    static func resolveURL(_ string: String) -> URL? {
         if let url = URL(string: string), url.scheme != nil {
             return url
         }

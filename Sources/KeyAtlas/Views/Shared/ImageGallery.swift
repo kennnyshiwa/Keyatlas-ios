@@ -4,6 +4,7 @@ import SwiftUI
 struct ImageGalleryView: View {
     let images: [GalleryImage]
     @State private var selectedIndex = 0
+    @State private var saveToast: String?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -15,6 +16,18 @@ struct ImageGalleryView: View {
                         CachedImage(url: image.url, contentMode: .fit)
                             .tag(index)
                             .accessibilityLabel(image.caption ?? "Gallery image \(index + 1)")
+                            .contextMenu {
+                                Button {
+                                    saveCurrentImage()
+                                } label: {
+                                    Label("Save to Photos", systemImage: "square.and.arrow.down")
+                                }
+                                if let url = URL(string: image.url) ?? CachedImage.resolveURL(image.url) {
+                                    ShareLink(item: url) {
+                                        Label("Share", systemImage: "square.and.arrow.up")
+                                    }
+                                }
+                            }
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .automatic))
@@ -57,10 +70,32 @@ struct ImageGalleryView: View {
                 }
             }
             .background(.black)
+            .overlay(alignment: .top) {
+                if let toast = saveToast {
+                    Text(toast)
+                        .font(.subheadline.weight(.medium))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .padding(.top, 60)
+                }
+            }
+            .animation(.easeInOut, value: saveToast)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(.white)
+                    HStack(spacing: 16) {
+                        Button {
+                            saveCurrentImage()
+                        } label: {
+                            Image(systemName: "square.and.arrow.down")
+                                .foregroundStyle(.white)
+                        }
+                        .accessibilityLabel("Save image to Photos")
+
+                        Button("Done") { dismiss() }
+                            .foregroundStyle(.white)
+                    }
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Text("\(selectedIndex + 1) / \(images.count)")
@@ -70,6 +105,64 @@ struct ImageGalleryView: View {
             }
             .toolbarBackground(.hidden, for: .navigationBar)
         }
+    }
+
+    private func saveCurrentImage() {
+        guard let image = images[safe: selectedIndex] else { return }
+        let urlStr = image.url
+
+        // Resolve relative URLs
+        guard let url = URL(string: urlStr) ?? CachedImage.resolveURL(urlStr) else { return }
+
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                guard let uiImage = UIImage(data: data) else {
+                    await showToast("Failed to load image")
+                    return
+                }
+                try await saveToPhotoLibrary(uiImage)
+                await showToast("Saved to Photos ✓")
+            } catch {
+                await showToast("Save failed")
+            }
+        }
+    }
+
+    private func saveToPhotoLibrary(_ image: UIImage) async throws {
+        return try await withCheckedThrowingContinuation { continuation in
+            PHPhotoLibrarySaver.save(image) { success, error in
+                if let error { continuation.resume(throwing: error) }
+                else { continuation.resume() }
+            }
+        }
+    }
+
+    @MainActor
+    private func showToast(_ message: String) {
+        saveToast = message
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            saveToast = nil
+        }
+    }
+}
+
+/// Helper to bridge UIImageWriteToSavedPhotosAlbum callback
+private final class PHPhotoLibrarySaver: NSObject {
+    private var completion: ((Bool, Error?) -> Void)?
+
+    static func save(_ image: UIImage, completion: @escaping (Bool, Error?) -> Void) {
+        let saver = PHPhotoLibrarySaver()
+        saver.completion = completion
+        // Prevent dealloc before callback
+        objc_setAssociatedObject(image, "saver", saver, .OBJC_ASSOCIATION_RETAIN)
+        UIImageWriteToSavedPhotosAlbum(image, saver, #selector(didFinish(_:error:context:)), nil)
+    }
+
+    @objc private func didFinish(_ image: UIImage, error: Error?, context: UnsafeMutableRawPointer?) {
+        completion?(error == nil, error)
+        completion = nil
     }
 }
 
