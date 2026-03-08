@@ -14,7 +14,7 @@ struct ImageGalleryView: View {
                 // Main image
                 TabView(selection: $selectedIndex) {
                     ForEach(Array(images.enumerated()), id: \.element.id) { index, image in
-                        CachedImage(url: image.url, contentMode: .fit)
+                        CachedImage(url: image.url, contentMode: .fit, targetSize: CGSize(width: 800, height: 800), priority: .high)
                             .tag(index)
                             .accessibilityLabel(image.caption ?? "Gallery image \(index + 1)")
                             .contextMenu {
@@ -49,7 +49,7 @@ struct ImageGalleryView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(Array(images.enumerated()), id: \.element.id) { index, image in
-                                    CachedImage(url: image.url)
+                                    CachedImage(url: image.url, targetSize: CGSize(width: 60, height: 60))
                                         .frame(width: 60, height: 60)
                                         .clipShape(RoundedRectangle(cornerRadius: 6))
                                         .overlay(
@@ -166,7 +166,7 @@ struct GalleryPreview: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(images) { image in
-                            CachedImage(url: image.url)
+                            CachedImage(url: image.url, targetSize: CGSize(width: 120, height: 90))
                                 .frame(width: 120, height: 90)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                         }

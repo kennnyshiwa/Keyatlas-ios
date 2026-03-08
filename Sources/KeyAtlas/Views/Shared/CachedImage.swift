@@ -1,17 +1,22 @@
 import SwiftUI
 import NukeUI
+import Nuke
 
 /// Wrapper around NukeUI's LazyImage for consistent image loading
 struct CachedImage: View {
     let url: String?
     var contentMode: ContentMode = .fill
+    /// Target display size — images are downsampled on decode to this size
+    var targetSize: CGSize?
+    /// Priority for loading (use .high for visible hero images, .low for offscreen thumbnails)
+    var priority: ImageRequest.Priority = .normal
 
     /// Resolve relative paths (e.g. "/uploads/...") against the API base URL.
     static let baseURL = URL(string: "https://keyatlas.io")!
 
     var body: some View {
         if let urlString = url, let imageURL = Self.resolveURL(urlString) {
-            LazyImage(url: imageURL) { state in
+            LazyImage(request: makeRequest(url: imageURL)) { state in
                 if let image = state.image {
                     image
                         .resizable()
@@ -19,13 +24,33 @@ struct CachedImage: View {
                 } else if state.error != nil {
                     placeholder
                 } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Shimmer placeholder instead of spinner
+                    Rectangle()
+                        .fill(.quaternary)
+                        .overlay {
+                            ProgressView()
+                                .tint(.secondary)
+                        }
                 }
             }
         } else {
             placeholder
         }
+    }
+
+    private func makeRequest(url: URL) -> ImageRequest {
+        var processors: [ImageProcessing] = []
+
+        // Downsample to target size on decode — hugely reduces memory and speeds up rendering
+        if let size = targetSize {
+            let scale = UIScreen.main.scale
+            let pixelSize = CGSize(width: size.width * scale, height: size.height * scale)
+            processors.append(ImageProcessors.Resize(size: pixelSize, contentMode: .aspectFit))
+        }
+
+        var request = ImageRequest(url: url, processors: processors)
+        request.priority = priority
+        return request
     }
 
     static func resolveURL(_ string: String) -> URL? {

@@ -13,7 +13,7 @@ struct ProjectCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Hero image
             GeometryReader { geo in
-                CachedImage(url: project.heroImageUrl)
+                CachedImage(url: project.heroImageUrl, targetSize: CGSize(width: 400, height: 250))
                     .frame(width: geo.size.width, height: heroHeight)
                     .clipped()
             }

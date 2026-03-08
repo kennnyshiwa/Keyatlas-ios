@@ -111,7 +111,7 @@ struct ProjectDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Hero image
                 ZStack(alignment: .bottomLeading) {
-                    CachedImage(url: project.heroImageUrl, contentMode: .fit)
+                    CachedImage(url: project.heroImageUrl, contentMode: .fit, targetSize: CGSize(width: 600, height: 250), priority: .high)
                         .frame(maxWidth: .infinity)
                         .frame(height: 250)
                         .background(.black.opacity(0.03))
@@ -631,7 +631,7 @@ struct ProjectDetailView: View {
                     ForEach(viewModel.relatedProjects) { related in
                         NavigationLink(value: related.slug) {
                             VStack(alignment: .leading, spacing: 4) {
-                                CachedImage(url: related.heroImageUrl, contentMode: .fill)
+                                CachedImage(url: related.heroImageUrl, contentMode: .fill, targetSize: CGSize(width: 160, height: 100))
                                     .frame(width: 160, height: 100)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                 Text(related.title)

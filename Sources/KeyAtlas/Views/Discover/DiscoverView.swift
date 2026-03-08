@@ -140,7 +140,7 @@ struct CompactProjectCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            CachedImage(url: project.heroImageUrl)
+            CachedImage(url: project.heroImageUrl, targetSize: CGSize(width: 200, height: 130))
                 .frame(width: 200, height: 130)
                 .clipped()
 
