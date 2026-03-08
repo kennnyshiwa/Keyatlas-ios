@@ -23,7 +23,7 @@ struct ImageGalleryView: View {
                                 } label: {
                                     Label("Save to Photos", systemImage: "square.and.arrow.down")
                                 }
-                                if let url = URL(string: image.url) ?? CachedImage.resolveURL(image.url) {
+                                if let url = CachedImage.resolveURL(image.url) {
                                     ShareLink(item: url) {
                                         Label("Share", systemImage: "square.and.arrow.up")
                                     }
@@ -112,8 +112,8 @@ struct ImageGalleryView: View {
         guard let image = images[safe: selectedIndex] else { return }
         let urlStr = image.url
 
-        // Resolve relative URLs
-        guard let url = URL(string: urlStr) ?? CachedImage.resolveURL(urlStr) else {
+        // Resolve relative URLs against base
+        guard let url = CachedImage.resolveURL(urlStr) else {
             Task { await showToast("Invalid image URL") }
             return
         }
