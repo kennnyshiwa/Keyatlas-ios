@@ -32,8 +32,11 @@ struct CachedImage: View {
         if let url = URL(string: string), url.scheme != nil {
             return url
         }
-        // Relative path — resolve against base
-        return URL(string: string, relativeTo: baseURL)
+        // Relative path — resolve to absolute URL for consistent caching
+        if let relative = URL(string: string, relativeTo: baseURL) {
+            return relative.absoluteURL
+        }
+        return nil
     }
 
     private var placeholder: some View {

@@ -114,39 +114,38 @@ struct ImageGalleryView: View {
 
         // Resolve relative URLs against base
         guard let url = CachedImage.resolveURL(urlStr) else {
-            Task { await showToast("Invalid image URL") }
+            showToast("Invalid image URL")
             return
         }
 
-        Task {
+        Task.detached {
             // Request photo library permission
             let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
             guard status == .authorized || status == .limited else {
-                await showToast("Photo library access denied")
+                await MainActor.run { showToast("Photo library access denied") }
                 return
             }
 
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 guard let uiImage = UIImage(data: data) else {
-                    await showToast("Failed to load image")
+                    await MainActor.run { showToast("Failed to load image") }
                     return
                 }
 
                 try await PHPhotoLibrary.shared().performChanges {
                     PHAssetChangeRequest.creationRequestForAsset(from: uiImage)
                 }
-                await showToast("Saved to Photos ✓")
+                await MainActor.run { showToast("Saved to Photos ✓") }
             } catch {
-                await showToast("Save failed: \(error.localizedDescription)")
+                await MainActor.run { showToast("Save failed: \(error.localizedDescription)") }
             }
         }
     }
 
-    @MainActor
     private func showToast(_ message: String) {
-        saveToast = message
-        Task {
+        Task { @MainActor in
+            saveToast = message
             try? await Task.sleep(for: .seconds(2))
             saveToast = nil
         }
