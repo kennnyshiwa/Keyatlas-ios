@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 /// Full-screen gallery carousel with thumbnail rail
 struct ImageGalleryView: View {
@@ -112,28 +113,32 @@ struct ImageGalleryView: View {
         let urlStr = image.url
 
         // Resolve relative URLs
-        guard let url = URL(string: urlStr) ?? CachedImage.resolveURL(urlStr) else { return }
+        guard let url = URL(string: urlStr) ?? CachedImage.resolveURL(urlStr) else {
+            Task { await showToast("Invalid image URL") }
+            return
+        }
 
         Task {
+            // Request photo library permission
+            let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+            guard status == .authorized || status == .limited else {
+                await showToast("Photo library access denied")
+                return
+            }
+
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 guard let uiImage = UIImage(data: data) else {
                     await showToast("Failed to load image")
                     return
                 }
-                try await saveToPhotoLibrary(uiImage)
+
+                try await PHPhotoLibrary.shared().performChanges {
+                    PHAssetChangeRequest.creationRequestForAsset(from: uiImage)
+                }
                 await showToast("Saved to Photos ✓")
             } catch {
-                await showToast("Save failed")
-            }
-        }
-    }
-
-    private func saveToPhotoLibrary(_ image: UIImage) async throws {
-        return try await withCheckedThrowingContinuation { continuation in
-            PHPhotoLibrarySaver.save(image) { success, error in
-                if let error { continuation.resume(throwing: error) }
-                else { continuation.resume() }
+                await showToast("Save failed: \(error.localizedDescription)")
             }
         }
     }
@@ -145,24 +150,6 @@ struct ImageGalleryView: View {
             try? await Task.sleep(for: .seconds(2))
             saveToast = nil
         }
-    }
-}
-
-/// Helper to bridge UIImageWriteToSavedPhotosAlbum callback
-private final class PHPhotoLibrarySaver: NSObject {
-    private var completion: ((Bool, Error?) -> Void)?
-
-    static func save(_ image: UIImage, completion: @escaping (Bool, Error?) -> Void) {
-        let saver = PHPhotoLibrarySaver()
-        saver.completion = completion
-        // Prevent dealloc before callback
-        objc_setAssociatedObject(image, "saver", saver, .OBJC_ASSOCIATION_RETAIN)
-        UIImageWriteToSavedPhotosAlbum(image, saver, #selector(didFinish(_:error:context:)), nil)
-    }
-
-    @objc private func didFinish(_ image: UIImage, error: Error?, context: UnsafeMutableRawPointer?) {
-        completion?(error == nil, error)
-        completion = nil
     }
 }
 
