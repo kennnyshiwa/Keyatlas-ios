@@ -17,9 +17,8 @@ struct RichCommentView: View {
                             .font(.subheadline)
                     }
                 case .image(let url):
-                    CachedImage(url: url)
-                        .frame(maxWidth: .infinity)
-                        .frame(maxHeight: 300)
+                    CachedImage(url: url, contentMode: .fit)
+                        .frame(maxWidth: .infinity, minHeight: 100, maxHeight: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
