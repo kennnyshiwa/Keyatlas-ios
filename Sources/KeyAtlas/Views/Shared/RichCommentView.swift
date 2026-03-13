@@ -60,10 +60,12 @@ struct RichCommentView: View {
                 parts.append(.text(beforeText))
             }
 
-            // The image
+            // The image — resolve relative paths against base URL
             let src = String(remaining[srcRange])
             if src.hasPrefix("http") {
                 parts.append(.image(src))
+            } else if src.hasPrefix("/") {
+                parts.append(.image("https://keyatlas.io\(src)"))
             }
 
             // Continue after the match
