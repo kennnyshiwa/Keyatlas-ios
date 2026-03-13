@@ -62,7 +62,7 @@ extension String {
 
 extension Project {
     var commentCount: Int {
-        comments?.count ?? 0
+        apiCommentCount ?? comments?.count ?? 0
     }
 
     var isRecentlyUpdated: Bool {

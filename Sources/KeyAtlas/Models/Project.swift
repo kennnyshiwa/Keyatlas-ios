@@ -225,6 +225,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
     let gbEndDate: String?
     let followCount: Int?
     let favoriteCount: Int?
+    let apiCommentCount: Int?
     let isFollowing: Bool?
     let isFavorited: Bool?
     let isFeatured: Bool?
@@ -243,6 +244,7 @@ struct Project: Codable, Identifiable, Hashable, Sendable {
         case gbEndDate = "gb_end_date"
         case followCount = "follow_count"
         case favoriteCount = "favorite_count"
+        case apiCommentCount = "comment_count"
         case isFollowing = "is_following"
         case isFavorited = "is_favorited"
         case isFeatured = "is_featured"

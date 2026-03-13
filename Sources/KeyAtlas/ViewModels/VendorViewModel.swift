@@ -132,6 +132,7 @@ final class VendorDetailViewModel: @unchecked Sendable {
                     gbEndDate: nil,
                     followCount: nil,
                     favoriteCount: nil,
+                    apiCommentCount: nil,
                     isFollowing: nil,
                     isFavorited: nil,
                     isFeatured: nil,
