@@ -589,9 +589,10 @@ struct ProjectDetailView: View {
     }
 
     private func canQuickEdit(project: Project) -> Bool {
-        guard let me = authService.currentUser?.id,
-              let owner = project.designer?.id else { return false }
-        return me == owner
+        guard let me = authService.currentUser else { return false }
+        if me.isAdmin { return true }
+        guard let owner = project.designer?.id else { return false }
+        return me.id == owner
     }
 
     // MARK: - Capsule tag
