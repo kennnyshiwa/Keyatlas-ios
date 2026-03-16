@@ -581,14 +581,7 @@ struct ProjectDetailView: View {
     }
 
     private func shareMessage(for project: Project, ref: String) -> String {
-        let url = shareURL(for: project, ref: ref).absoluteString
-        let socialProof = "\(project.followCount ?? 0) followers • \(project.favoriteCount ?? 0) bookmarks • \(project.commentCount) comments"
-
-        return [
-            "\(project.title) — \(project.status.displayName)",
-            socialProof,
-            "Track updates on KeyAtlas: \(url)"
-        ].joined(separator: "\n")
+        return shareURL(for: project, ref: ref).absoluteString
     }
 
     private func copyShareMessage(project: Project, ref: String) {
