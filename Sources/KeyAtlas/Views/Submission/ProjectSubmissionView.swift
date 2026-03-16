@@ -388,7 +388,7 @@ struct ProjectSubmissionView: View {
 
             Section("Status") {
                 Picker("Status", selection: $status) {
-                    ForEach([ProjectStatus.interestCheck, .groupBuy], id: \.self) { s in
+                    ForEach(ProjectStatus.allCases, id: \.self) { s in
                         Text(s.displayName).tag(s)
                     }
                 }
