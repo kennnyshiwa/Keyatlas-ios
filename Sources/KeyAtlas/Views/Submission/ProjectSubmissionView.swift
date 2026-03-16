@@ -1000,7 +1000,8 @@ struct ProjectSubmissionView: View {
                        description == originalRawDescription.keyAtlasDisplayText {
                         return originalRawDescription
                     }
-                    return description
+                    // Never send plain text: convert edited plain text back into HTML.
+                    return description.keyAtlasPlainTextToHTML()
                 }()
 
                 let updateBody = UpdateBody(

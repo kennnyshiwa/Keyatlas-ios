@@ -1,6 +1,41 @@
 import Foundation
 
 extension String {
+    /// Convert plain text entered on iOS back into simple rich HTML.
+    /// - Preserves line breaks/paragraphs
+    /// - Auto-linkifies http/https URLs
+    func keyAtlasPlainTextToHTML() -> String {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+
+        // Basic escaping first
+        var escaped = trimmed
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "'", with: "&#39;")
+
+        // Linkify URLs
+        if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) {
+            let ns = escaped as NSString
+            let matches = detector.matches(in: escaped, options: [], range: NSRange(location: 0, length: ns.length)).reversed()
+            for m in matches {
+                guard let url = m.url else { continue }
+                let raw = ns.substring(with: m.range)
+                let anchor = "<a href=\"\(url.absoluteString)\">\(raw)</a>"
+                escaped = (escaped as NSString).replacingCharacters(in: m.range, with: anchor)
+            }
+        }
+
+        // Preserve paragraphs / line breaks
+        let paragraphs = escaped
+            .components(separatedBy: "\n\n")
+            .map { p in "<p>\(p.replacingOccurrences(of: "\n", with: "<br/>") )</p>" }
+
+        return paragraphs.joined(separator: "\n")
+    }
+
     /// Convert common scraped HTML blobs into readable plain text for mobile UI.
     var keyAtlasDisplayText: String {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
