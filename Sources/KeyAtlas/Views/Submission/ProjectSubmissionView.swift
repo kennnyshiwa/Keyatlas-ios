@@ -84,6 +84,7 @@ struct ProjectSubmissionView: View {
     @State private var title = ""
     @State private var slug = ""
     @State private var description = ""
+    @State private var originalRawDescription: String? = nil
     @State private var status: ProjectStatus = .interestCheck
     @State private var categoryId = ""
     @State private var estimatedDelivery = ""
@@ -144,6 +145,7 @@ struct ProjectSubmissionView: View {
         _title = State(initialValue: projectToEdit?.title ?? "")
         _slug = State(initialValue: projectToEdit?.slug ?? "")
         _description = State(initialValue: projectToEdit?.description?.keyAtlasDisplayText ?? "")
+        _originalRawDescription = State(initialValue: projectToEdit?.description)
         _status = State(initialValue: projectToEdit?.status ?? .interestCheck)
         _categoryId = State(initialValue: projectToEdit?.categoryId ?? "")
         _profile = State(initialValue: projectToEdit?.profile ?? "")
@@ -866,6 +868,7 @@ struct ProjectSubmissionView: View {
         title = project.title + " (Copy)"
         slug = ""  // Force new slug
         description = project.description?.keyAtlasDisplayText ?? ""
+        originalRawDescription = project.description
         status = project.status
         categoryId = project.categoryId ?? ""
         estimatedDelivery = project.estimatedDelivery ?? ""
@@ -989,9 +992,20 @@ struct ProjectSubmissionView: View {
         do {
             let targetSlug: String
             if let editSlug = projectToEdit?.slug {
+                let descriptionForUpdate: String? = {
+                    guard !description.isEmpty else { return nil }
+                    // Preserve original rich HTML when user did not actually change the text
+                    // in the iOS editor (which currently displays a plain-text projection).
+                    if let originalRawDescription,
+                       description == originalRawDescription.keyAtlasDisplayText {
+                        return originalRawDescription
+                    }
+                    return description
+                }()
+
                 let updateBody = UpdateBody(
                     title: title,
-                    description: description.isEmpty ? nil : description,
+                    description: descriptionForUpdate,
                     status: status.rawValue,
                     categoryId: categoryId.isEmpty ? nil : categoryId,
                     heroImageUrl: heroUrl,
