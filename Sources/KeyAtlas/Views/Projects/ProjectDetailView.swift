@@ -249,7 +249,17 @@ struct ProjectDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.white)
                 .shadow(radius: 4)
-            if let designer = project.designer {
+            if let dp = project.designerProfile {
+                NavigationLink {
+                    DesignerDetailView(slug: dp.slug)
+                } label: {
+                    Text("by \(dp.name)")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .underline()
+                        .shadow(radius: 2)
+                }
+            } else if let designer = project.designer {
                 Text("by \(designer.displayName)")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.9))

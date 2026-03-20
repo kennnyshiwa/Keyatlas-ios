@@ -1,20 +1,20 @@
 import Foundation
 
 @Observable
-final class VendorListViewModel: @unchecked Sendable {
-    var vendors: [Vendor] = []
+final class DesignerListViewModel: @unchecked Sendable {
+    var designers: [Designer] = []
     var isLoading = false
     var error: String?
 
     private let api = APIClient.shared
 
-    func loadVendors() async {
+    func loadDesigners() async {
         await MainActor.run { self.isLoading = true; self.error = nil }
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            let response: PaginatedResponse<Vendor> = try await api.request(path: "/api/v1/vendors")
-            await MainActor.run { self.vendors = response.data }
+            let response: PaginatedResponse<Designer> = try await api.request(path: "/api/v1/designers")
+            await MainActor.run { self.designers = response.data }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }
@@ -22,23 +22,23 @@ final class VendorListViewModel: @unchecked Sendable {
 }
 
 @Observable
-final class VendorDetailViewModel: @unchecked Sendable {
-    var vendor: Vendor?
+final class DesignerDetailViewModel: @unchecked Sendable {
+    var designer: Designer?
     var projects: [Project] = []
     var isLoading = false
     var error: String?
 
     private let api = APIClient.shared
 
-    func loadVendor(slug: String) async {
+    func loadDesigner(slug: String) async {
         await MainActor.run { self.isLoading = true; self.error = nil }
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            struct VendorPayload: Codable, Sendable {
-                let data: VendorData
+            struct DesignerPayload: Codable, Sendable {
+                let data: DesignerData
             }
-            struct VendorProjectLite: Codable, Hashable, Sendable {
+            struct DesignerProjectLite: Codable, Hashable, Sendable {
                 let id: String?
                 let title: String?
                 let slug: String?
@@ -77,33 +77,41 @@ final class VendorDetailViewModel: @unchecked Sendable {
                 }
             }
 
-            struct VendorData: Codable, Hashable, Sendable {
+            struct DesignerData: Codable, Hashable, Sendable {
                 let id: String
                 let name: String
                 let slug: String
                 let description: String?
-                let logo: String?
-                let storefrontUrl: String?
-                let verified: Bool?
-                let regionsServed: [String]?
-                let projects: [VendorProjectLite]?
+                let logoUrl: String?
+                let bannerUrl: String?
+                let websiteUrl: String?
+                let createdAt: String?
+                let projects: [DesignerProjectLite]?
+
+                enum CodingKeys: String, CodingKey {
+                    case id, name, slug, description, projects
+                    case logoUrl = "logo_url"
+                    case bannerUrl = "banner_url"
+                    case websiteUrl = "website_url"
+                    case createdAt = "created_at"
+                }
             }
 
-            let response: VendorPayload = try await api.request(path: "/api/v1/vendors/\(slug)")
-            let v = response.data
-            let mapped = Vendor(
-                id: v.id,
-                name: v.name,
-                slug: v.slug,
-                description: v.description,
-                logoUrl: v.logo,
-                websiteUrl: v.storefrontUrl,
-                regions: v.regionsServed,
-                projectCount: v.projects?.count,
-                createdAt: nil
+            let response: DesignerPayload = try await api.request(path: "/api/v1/designers/\(slug)")
+            let d = response.data
+            let mapped = Designer(
+                id: d.id,
+                name: d.name,
+                slug: d.slug,
+                description: d.description,
+                logoUrl: d.logoUrl,
+                bannerUrl: d.bannerUrl,
+                websiteUrl: d.websiteUrl,
+                projectCount: d.projects?.count,
+                createdAt: d.createdAt
             )
             let nowISO = ISO8601DateFormatter().string(from: Date())
-            let projectModels: [Project] = (v.projects ?? []).compactMap { p in
+            let projectModels: [Project] = (d.projects ?? []).compactMap { p in
                 guard let id = p.id, let title = p.title, let slug = p.slug else { return nil }
                 let status = ProjectStatus(rawValue: p.statusRaw ?? "") ?? .interestCheck
 
@@ -145,7 +153,7 @@ final class VendorDetailViewModel: @unchecked Sendable {
             }
 
             await MainActor.run {
-                self.vendor = mapped
+                self.designer = mapped
                 self.projects = projectModels
             }
         } catch {

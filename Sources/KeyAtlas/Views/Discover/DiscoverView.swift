@@ -62,6 +62,14 @@ struct DiscoverView: View {
                                 Divider().padding(.leading, 56)
 
                                 NavigationLink {
+                                    DesignerListView()
+                                } label: {
+                                    discoverLink(title: "Designers", icon: "paintpalette", subtitle: "Browse keyboard designers")
+                                }
+
+                                Divider().padding(.leading, 56)
+
+                                NavigationLink {
                                     GuideListView()
                                 } label: {
                                     discoverLink(title: "Guides", icon: "book", subtitle: "Build guides & tutorials")
