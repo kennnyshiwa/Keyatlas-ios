@@ -4,6 +4,8 @@ import Foundation
 final class SearchViewModel: @unchecked Sendable {
     var query = ""
     var results: [Project] = []
+    var vendorResults: [Vendor] = []
+    var designerResults: [Designer] = []
     var isSearching = false
     var hasSearched = false
 
@@ -15,6 +17,8 @@ final class SearchViewModel: @unchecked Sendable {
         guard !trimmed.isEmpty else {
             await MainActor.run {
                 self.results = []
+                self.vendorResults = []
+                self.designerResults = []
                 self.hasSearched = false
             }
             return
@@ -24,12 +28,14 @@ final class SearchViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isSearching = false } }
 
         do {
-            let response: PaginatedResponse<Project> = try await api.request(
-                path: "/api/v1/projects",
-                query: ["q": trimmed, "page_size": "30"]
+            let response: SearchResponse = try await api.request(
+                path: "/api/v1/search",
+                query: ["q": trimmed, "limit": "30"]
             )
             await MainActor.run {
                 self.results = response.data
+                self.vendorResults = response.vendors ?? []
+                self.designerResults = response.designers ?? []
                 self.hasSearched = true
             }
         } catch {
@@ -46,4 +52,15 @@ final class SearchViewModel: @unchecked Sendable {
             await search()
         }
     }
+
+    var hasAnyResults: Bool {
+        !results.isEmpty || !vendorResults.isEmpty || !designerResults.isEmpty
+    }
+}
+
+/// Search response that includes projects, vendors, and designers
+struct SearchResponse: Codable, Sendable {
+    let data: [Project]
+    let vendors: [Vendor]?
+    let designers: [Designer]?
 }
