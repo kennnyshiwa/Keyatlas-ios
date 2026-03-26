@@ -47,7 +47,7 @@ private struct AdminReportRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let project = report.project {
-                Text(project.title)
+                Text(project.displayTitle)
                     .font(.subheadline)
                     .fontWeight(.medium)
             }

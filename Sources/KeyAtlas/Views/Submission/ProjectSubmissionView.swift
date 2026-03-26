@@ -672,7 +672,7 @@ struct ProjectSubmissionView: View {
                                     .frame(width: 56, height: 40)
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(project.title)
+                                    Text(project.displayTitle)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundStyle(.primary)
@@ -682,7 +682,7 @@ struct ProjectSubmissionView: View {
                                 }
                             }
                         }
-                        .accessibilityLabel("Duplicate \(project.title)")
+                        .accessibilityLabel("Duplicate \(project.displayTitle)")
                     }
                     .listStyle(.plain)
                 }

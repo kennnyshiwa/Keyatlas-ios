@@ -70,7 +70,7 @@ private struct AdminProjectRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(project.title)
+                Text(project.displayTitle)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .lineLimit(1)

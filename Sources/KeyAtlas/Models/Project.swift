@@ -203,6 +203,9 @@ struct SoundTest: Codable, Identifiable, Hashable, Sendable {
 struct Project: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
+
+    /// Title with HTML entities decoded for display (e.g. &#12304; → 【)
+    var displayTitle: String { title.decodingHTMLEntities }
     let slug: String
     let description: String?
     let status: ProjectStatus

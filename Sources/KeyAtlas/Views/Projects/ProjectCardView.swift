@@ -59,7 +59,7 @@ struct ProjectCardView: View {
                 }
 
                 // Title
-                Text(project.title)
+                Text(project.displayTitle)
                     .font(.headline)
                     .lineLimit(2)
                     .truncationMode(.tail)
@@ -112,7 +112,7 @@ struct ProjectCardView: View {
         .cardStyle()
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(project.title), \(project.status.displayName)")
+        .accessibilityLabel("\(project.displayTitle), \(project.status.displayName)")
     }
 
     private func socialStat(icon: String, value: Int) -> some View {

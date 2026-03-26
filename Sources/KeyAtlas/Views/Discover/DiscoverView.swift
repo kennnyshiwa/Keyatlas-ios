@@ -173,7 +173,7 @@ struct CompactProjectCard: View {
                     }
                 }
 
-                Text(project.title)
+                Text(project.displayTitle)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .lineLimit(2)
@@ -196,7 +196,7 @@ struct CompactProjectCard: View {
         .frame(width: 200)
         .cardStyle()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(project.title), \(project.status.displayName)")
+        .accessibilityLabel("\(project.displayTitle), \(project.status.displayName)")
     }
 
     private func statItem(icon: String, value: Int) -> some View {

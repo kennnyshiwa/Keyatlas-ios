@@ -26,7 +26,7 @@ private struct ProfileProjectRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(project.title)
+                Text(project.displayTitle)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .lineLimit(3)

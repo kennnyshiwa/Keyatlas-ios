@@ -1,6 +1,44 @@
 import Foundation
 
 extension String {
+    /// Decode HTML entities (numeric + common named) for display in titles etc.
+    var decodingHTMLEntities: String {
+        guard contains("&") else { return self }
+        var out = self
+        // Decode numeric entities first (&#12304; → 【)
+        if let dec = try? NSRegularExpression(pattern: "&#(\\d+);", options: []) {
+            let ns = out as NSString
+            let matches = dec.matches(in: out, options: [], range: NSRange(location: 0, length: ns.length)).reversed()
+            for m in matches {
+                let raw = ns.substring(with: m.range(at: 1))
+                if let code = Int(raw), let scalar = UnicodeScalar(code) {
+                    out = (out as NSString).replacingCharacters(in: m.range(at: 0), with: String(Character(scalar)))
+                }
+            }
+        }
+        // Decode hex entities (&#x3010; → 【)
+        if let hex = try? NSRegularExpression(pattern: "&#x([0-9a-fA-F]+);", options: []) {
+            let ns = out as NSString
+            let matches = hex.matches(in: out, options: [], range: NSRange(location: 0, length: ns.length)).reversed()
+            for m in matches {
+                let raw = ns.substring(with: m.range(at: 1))
+                if let code = UInt32(raw, radix: 16), let scalar = UnicodeScalar(code) {
+                    out = (out as NSString).replacingCharacters(in: m.range(at: 0), with: String(Character(scalar)))
+                }
+            }
+        }
+        // Common named entities
+        out = out
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&apos;", with: "'")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+        return out
+    }
+
     /// Convert plain text entered on iOS back into simple rich HTML.
     /// - Preserves line breaks/paragraphs
     /// - Auto-linkifies http/https URLs

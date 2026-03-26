@@ -43,6 +43,8 @@ struct AdminProject: Codable, Identifiable, Hashable, Sendable {
     let createdAt: String
     let updatedAt: String
     let creator: AdminProjectCreator?
+
+    var displayTitle: String { title.decodingHTMLEntities }
 }
 
 struct AdminProjectCreator: Codable, Hashable, Sendable {
@@ -78,6 +80,8 @@ struct AdminReportProject: Codable, Hashable, Sendable {
     let id: String
     let title: String
     let slug: String
+
+    var displayTitle: String { title.decodingHTMLEntities }
 }
 
 struct AdminReportUser: Codable, Hashable, Sendable {

@@ -30,7 +30,7 @@ struct ProjectDetailView: View {
                     Menu {
                         ShareLink(
                             item: shareURL(for: project, ref: "ios_share"),
-                            subject: Text(project.title),
+                            subject: Text(project.displayTitle),
                             message: Text(shareMessage(for: project, ref: "ios_share"))
                         ) {
                             Label("Share", systemImage: "square.and.arrow.up")
@@ -241,7 +241,7 @@ struct ProjectDetailView: View {
     private func heroOverlay(_ project: Project) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             StatusBadge(status: project.status)
-            Text(project.title.keyAtlasDisplayText)
+            Text(project.displayTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .lineLimit(3)

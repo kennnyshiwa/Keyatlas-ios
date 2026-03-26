@@ -147,7 +147,7 @@ struct CalendarTabView: View {
                                             .frame(width: 50, height: 50)
                                             .clipShape(RoundedRectangle(cornerRadius: 6))
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(project.title)
+                                            Text(project.displayTitle)
                                                 .font(.subheadline)
                                                 .fontWeight(.medium)
                                             StatusBadge(status: project.status)
