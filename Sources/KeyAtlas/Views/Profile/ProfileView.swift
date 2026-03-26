@@ -270,34 +270,30 @@ struct ProfileTabView: View {
                             .padding(.horizontal)
 
                             ForEach(viewModel.notifications) { notification in
-                                HStack(alignment: .top, spacing: 8) {
-                                    // Fixed-width column for unread dot — keeps all text aligned
-                                    ZStack {
-                                        if !notification.isRead {
-                                            Circle()
-                                                .fill(.blue)
-                                                .frame(width: 8, height: 8)
-                                        }
-                                    }
-                                    .frame(width: 8)
-                                    .padding(.top, 6)
-
-                                    VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(spacing: 6) {
                                         Text(lifecycleLabel(for: notification.type))
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
-                                        Text(notification.title.decodingHTMLEntities)
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                        Text(notification.message.decodingHTMLEntities)
-                                            .font(.subheadline)
-                                        Text(notification.createdAt.relativeTime)
-                                            .font(.caption2)
-                                            .foregroundStyle(.tertiary)
+                                        if !notification.isRead {
+                                            Circle()
+                                                .fill(.blue)
+                                                .frame(width: 6, height: 6)
+                                        }
                                     }
+                                    Text(notification.title.decodingHTMLEntities)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                    Text(notification.message.decodingHTMLEntities)
+                                        .font(.subheadline)
+                                    Text(notification.createdAt.relativeTime)
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal)
-                                .padding(.vertical, 4)
+                                .padding(.vertical, 6)
+                                .background(notification.isRead ? .clear : Color.blue.opacity(0.05))
                             }
                         } else {
                             emptyTab(title: "No notifications", message: "You're all caught up.", icon: "bell")
