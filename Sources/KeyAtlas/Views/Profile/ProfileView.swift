@@ -270,18 +270,19 @@ struct ProfileTabView: View {
                             .padding(.horizontal)
 
                             ForEach(viewModel.notifications) { notification in
-                                HStack(spacing: 12) {
+                                HStack(alignment: .top, spacing: 12) {
                                     Circle()
                                         .fill(notification.isRead ? .clear : .blue)
                                         .frame(width: 8, height: 8)
+                                        .padding(.top, 6)
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(lifecycleLabel(for: notification.type))
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
-                                        Text(notification.title)
+                                        Text(notification.title.decodingHTMLEntities)
                                             .font(.subheadline)
                                             .fontWeight(.semibold)
-                                        Text(notification.message)
+                                        Text(notification.message.decodingHTMLEntities)
                                             .font(.subheadline)
                                         Text(notification.createdAt.relativeTime)
                                             .font(.caption2)

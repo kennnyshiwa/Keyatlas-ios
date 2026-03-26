@@ -100,26 +100,10 @@ final class ProfileViewModel: @unchecked Sendable {
         await MainActor.run { self.isMarkingAllRead = true }
         defer { Task { @MainActor in self.isMarkingAllRead = false } }
 
-        let paths = [
-            "/api/v1/notifications/mark-all-read",
-            "/api/v1/notifications/read-all",
-            "/api/v1/notifications/mark_read"
-        ]
-
-        var succeeded = false
-        for path in paths {
-            do {
-                try await api.requestVoid(.post, path: path, authenticated: true)
-                succeeded = true
-                break
-            } catch {
-                continue
-            }
-        }
-
-        if succeeded {
+        do {
+            try await api.requestVoid(.patch, path: "/api/v1/notifications", authenticated: true)
             await loadNotifications()
-        } else {
+        } catch {
             await MainActor.run {
                 self.error = "Couldn't mark all notifications as read right now."
             }
