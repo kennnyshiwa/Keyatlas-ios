@@ -270,11 +270,18 @@ struct ProfileTabView: View {
                             .padding(.horizontal)
 
                             ForEach(viewModel.notifications) { notification in
-                                HStack(alignment: .top, spacing: 12) {
-                                    Circle()
-                                        .fill(notification.isRead ? .clear : .blue)
-                                        .frame(width: 8, height: 8)
-                                        .padding(.top, 6)
+                                HStack(alignment: .top, spacing: 8) {
+                                    // Fixed-width column for unread dot — keeps all text aligned
+                                    ZStack {
+                                        if !notification.isRead {
+                                            Circle()
+                                                .fill(.blue)
+                                                .frame(width: 8, height: 8)
+                                        }
+                                    }
+                                    .frame(width: 8)
+                                    .padding(.top, 6)
+
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(lifecycleLabel(for: notification.type))
                                             .font(.caption2)
