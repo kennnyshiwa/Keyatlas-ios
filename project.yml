@@ -22,6 +22,7 @@ targets:
     resources:
       - path: Sources/KeyAtlas/Resources/Colors.xcassets
       - path: Sources/KeyAtlas/Resources/Assets.xcassets
+      - path: Sources/KeyAtlas/Resources/rich-text-editor.html
     dependencies:
       - package: Nuke
         product: Nuke

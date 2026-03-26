@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Rich Text Editor</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f2f2f7;
+      --text: #000000;
+      --text-secondary: #6c6c70;
+      --border: #c6c6c8;
+      --accent: #007aff;
+      --btn-bg: #ffffff;
+      --btn-active: #e5e5ea;
+      --toolbar-bg: #f2f2f7;
+      --editor-bg: #ffffff;
+      --placeholder: #aeaeb2;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e;
+        --surface: #2c2c2e;
+        --text: #ffffff;
+        --text-secondary: #aeaeb2;
+        --border: #3a3a3c;
+        --accent: #0a84ff;
+        --btn-bg: #2c2c2e;
+        --btn-active: #3a3a3c;
+        --toolbar-bg: #1c1c1e;
+        --editor-bg: #1c1c1e;
+        --placeholder: #636366;
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      background: var(--editor-bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    /* ─── Toolbar ──────────────────────────────────────────── */
+
+    #toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      padding: 6px 8px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .toolbar-group {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+    }
+
+    .toolbar-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    .toolbar-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 34px;
+      padding: 0 6px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text);
+      font-size: 15px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      transition: background 0.1s;
+    }
+
+    .toolbar-btn:active,
+    .toolbar-btn.active {
+      background: var(--btn-active);
+    }
+
+    .toolbar-btn.is-active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* ─── Editor ───────────────────────────────────────────── */
+
+    #editor {
+      min-height: 160px;
+      padding: 12px 14px 60px;
+      outline: none;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    #editor:empty::before {
+      content: attr(data-placeholder);
+      color: var(--placeholder);
+      pointer-events: none;
+    }
+
+    /* Typography inside editor */
+    #editor h1 { font-size: 1.6em; font-weight: 700; margin: 0.6em 0 0.3em; }
+    #editor h2 { font-size: 1.35em; font-weight: 600; margin: 0.6em 0 0.3em; }
+    #editor h3 { font-size: 1.15em; font-weight: 600; margin: 0.6em 0 0.3em; }
+    #editor p  { margin: 0.4em 0; }
+    #editor ul, #editor ol { padding-left: 1.5em; margin: 0.4em 0; }
+    #editor li { margin: 0.2em 0; }
+
+    #editor blockquote {
+      border-left: 3px solid var(--accent);
+      margin: 0.6em 0;
+      padding: 0.4em 0.8em;
+      color: var(--text-secondary);
+      background: var(--surface);
+      border-radius: 0 4px 4px 0;
+    }
+
+    #editor img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      display: block;
+      margin: 0.6em 0;
+    }
+
+    #editor a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    #editor code {
+      font-family: "Menlo", "Monaco", monospace;
+      font-size: 0.88em;
+      background: var(--surface);
+      padding: 0.1em 0.35em;
+      border-radius: 3px;
+    }
+
+    #editor pre {
+      background: var(--surface);
+      border-radius: 6px;
+      padding: 0.8em 1em;
+      overflow-x: auto;
+      margin: 0.6em 0;
+    }
+
+    #editor pre code {
+      background: none;
+      padding: 0;
+    }
+
+    /* Link dialog */
+    #link-dialog {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--toolbar-bg);
+      border-top: 1px solid var(--border);
+      padding: 12px 14px;
+      z-index: 200;
+    }
+
+    #link-dialog.visible { display: block; }
+
+    #link-dialog label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    #link-dialog input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--btn-bg);
+      color: var(--text);
+      font-size: 16px;
+      margin-bottom: 8px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    #link-dialog input:focus {
+      border-color: var(--accent);
+    }
+
+    .link-dialog-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .link-dialog-actions button {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    #link-cancel {
+      background: var(--btn-active);
+      color: var(--text);
+    }
+
+    #link-insert {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Toolbar ──────────────────────────────────────────────── -->
+<div id="toolbar">
+  <div class="toolbar-group">
+    <button class="toolbar-btn" id="btn-bold"      title="Bold"          onmousedown="handleBtn(event,'bold')">𝐁</button>
+    <button class="toolbar-btn" id="btn-italic"    title="Italic"        onmousedown="handleBtn(event,'italic')">𝘐</button>
+  </div>
+  <div class="toolbar-sep"></div>
+  <div class="toolbar-group">
+    <button class="toolbar-btn" id="btn-h2"        title="Heading 2"     onmousedown="handleHeading(event,'H2')">H2</button>
+    <button class="toolbar-btn" id="btn-h3"        title="Heading 3"     onmousedown="handleHeading(event,'H3')">H3</button>
+  </div>
+  <div class="toolbar-sep"></div>
+  <div class="toolbar-group">
+    <button class="toolbar-btn" id="btn-ul"        title="Bullet List"   onmousedown="handleBtn(event,'insertUnorderedList')">☰</button>
+    <button class="toolbar-btn" id="btn-ol"        title="Ordered List"  onmousedown="handleBtn(event,'insertOrderedList')">①</button>
+  </div>
+  <div class="toolbar-sep"></div>
+  <div class="toolbar-group">
+    <button class="toolbar-btn" id="btn-quote"     title="Blockquote"    onmousedown="handleBlockquote(event)">❝</button>
+    <button class="toolbar-btn" id="btn-link"      title="Insert Link"   onmousedown="openLinkDialog(event)">🔗</button>
+  </div>
+  <div class="toolbar-sep"></div>
+  <div class="toolbar-group">
+    <button class="toolbar-btn" title="Undo"    onmousedown="handleBtn(event,'undo')">↩</button>
+    <button class="toolbar-btn" title="Redo"    onmousedown="handleBtn(event,'redo')">↪</button>
+  </div>
+</div>
+
+<!-- ─── Editor ───────────────────────────────────────────────── -->
+<div id="editor"
+     contenteditable="true"
+     spellcheck="true"
+     data-placeholder="Write your project description…">
+</div>
+
+<!-- ─── Link Dialog ───────────────────────────────────────────── -->
+<div id="link-dialog">
+  <label for="link-url">Link URL</label>
+  <input id="link-url" type="url" placeholder="https://…" autocorrect="off" autocapitalize="none">
+  <div class="link-dialog-actions">
+    <button id="link-cancel"  onclick="closeLinkDialog()">Cancel</button>
+    <button id="link-insert"  onclick="insertLink()">Insert</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const editor     = document.getElementById('editor');
+  const linkDialog = document.getElementById('link-dialog');
+  const linkInput  = document.getElementById('link-url');
+
+  // ── Bridge helpers ─────────────────────────────────────────
+
+  function post(name, body) {
+    if (window.webkit && webkit.messageHandlers && webkit.messageHandlers[name]) {
+      webkit.messageHandlers[name].postMessage(body);
+    }
+  }
+
+  // ── Height reporter ────────────────────────────────────────
+
+  let heightTimer = null;
+  function reportHeight() {
+    clearTimeout(heightTimer);
+    heightTimer = setTimeout(function () {
+      var h = document.documentElement.scrollHeight;
+      post('editorHeight', h);
+    }, 50);
+  }
+
+  // ── Content reporter (debounced 300 ms) ────────────────────
+
+  let contentTimer = null;
+  function reportContent() {
+    clearTimeout(contentTimer);
+    contentTimer = setTimeout(function () {
+      post('contentChanged', editor.innerHTML);
+      reportHeight();
+    }, 300);
+  }
+
+  editor.addEventListener('input', reportContent);
+  editor.addEventListener('keyup', reportContent);
+
+  // ── Toolbar state updater ──────────────────────────────────
+
+  function updateToolbar() {
+    document.getElementById('btn-bold')   .classList.toggle('is-active', document.queryCommandState('bold'));
+    document.getElementById('btn-italic') .classList.toggle('is-active', document.queryCommandState('italic'));
+    document.getElementById('btn-ul')     .classList.toggle('is-active', document.queryCommandState('insertUnorderedList'));
+    document.getElementById('btn-ol')     .classList.toggle('is-active', document.queryCommandState('insertOrderedList'));
+
+    var block = document.queryCommandValue('formatBlock').toUpperCase();
+    document.getElementById('btn-quote').classList.toggle('is-active', block === 'BLOCKQUOTE');
+    document.getElementById('btn-h2')   .classList.toggle('is-active', block === 'H2');
+    document.getElementById('btn-h3')   .classList.toggle('is-active', block === 'H3');
+  }
+
+  editor.addEventListener('keyup',   updateToolbar);
+  editor.addEventListener('mouseup', updateToolbar);
+  editor.addEventListener('focus',   updateToolbar);
+
+  // ── Toolbar button handlers ────────────────────────────────
+
+  window.handleBtn = function (e, cmd) {
+    e.preventDefault();
+    editor.focus();
+    document.execCommand(cmd, false, null);
+    updateToolbar();
+    reportContent();
+  };
+
+  window.handleHeading = function (e, tag) {
+    e.preventDefault();
+    editor.focus();
+    var current = document.queryCommandValue('formatBlock').toUpperCase();
+    document.execCommand('formatBlock', false, current === tag ? 'P' : tag);
+    updateToolbar();
+    reportContent();
+  };
+
+  window.handleBlockquote = function (e) {
+    e.preventDefault();
+    editor.focus();
+    var current = document.queryCommandValue('formatBlock').toUpperCase();
+    document.execCommand('formatBlock', false, current === 'BLOCKQUOTE' ? 'P' : 'BLOCKQUOTE');
+    updateToolbar();
+    reportContent();
+  };
+
+  // ── Link dialog ────────────────────────────────────────────
+
+  var savedRange = null;
+
+  window.openLinkDialog = function (e) {
+    e.preventDefault();
+    editor.focus();
+    var sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRange = sel.getRangeAt(0).cloneRange();
+    }
+    var existing = document.queryCommandValue('createLink');
+    linkInput.value = existing || 'https://';
+    linkDialog.classList.add('visible');
+    setTimeout(function () { linkInput.focus(); linkInput.select(); }, 80);
+  };
+
+  window.closeLinkDialog = function () {
+    linkDialog.classList.remove('visible');
+    savedRange = null;
+    linkInput.value = '';
+  };
+
+  window.insertLink = function () {
+    var url = linkInput.value.trim();
+    closeLinkDialog();
+    if (!url || url === 'https://') return;
+    editor.focus();
+    if (savedRange) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
+    var sel = window.getSelection();
+    if (sel && sel.toString().trim().length === 0) {
+      // No text selected — insert URL as link text too
+      document.execCommand('insertHTML', false, '<a href="' + escHtml(url) + '">' + escHtml(url) + '</a>');
+    } else {
+      document.execCommand('createLink', false, url);
+    }
+    reportContent();
+  };
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Paste handler ──────────────────────────────────────────
+  // Keep text, bold, italic, lists, blockquotes, images, and links.
+  // Strip everything else (divs, spans, class/style/event attrs, scripts).
+
+  editor.addEventListener('paste', function (e) {
+    e.preventDefault();
+    var cd = e.clipboardData || window.clipboardData;
+    var html = cd.getData('text/html');
+    var text = cd.getData('text/plain');
+
+    if (html) {
+      var cleaned = sanitizeHTML(html);
+      document.execCommand('insertHTML', false, cleaned);
+    } else if (text) {
+      // Convert plain text with URLs to linked text
+      var lines = text.split('\n');
+      var result = lines.map(function(line) {
+        return line.replace(/(https?:\/\/[^\s]+)/g, function(url) {
+          return '<a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
+        });
+      }).join('<br>');
+      document.execCommand('insertHTML', false, result);
+    }
+    reportContent();
+  });
+
+  function sanitizeHTML(html) {
+    var doc = (new DOMParser()).parseFromString(html, 'text/html');
+    cleanNode(doc.body);
+    return doc.body.innerHTML;
+  }
+
+  var ALLOWED_TAGS = new Set([
+    'P','BR','B','STRONG','I','EM','U','S','STRIKE',
+    'H1','H2','H3','H4','H5','H6',
+    'UL','OL','LI',
+    'BLOCKQUOTE','PRE','CODE',
+    'A','IMG',
+    'TABLE','THEAD','TBODY','TR','TH','TD'
+  ]);
+
+  var KEEP_ATTRS = {
+    'A':   ['href','target'],
+    'IMG': ['src','alt','width','height'],
+  };
+
+  function cleanNode(node) {
+    var children = Array.from(node.childNodes);
+    for (var i = 0; i < children.length; i++) {
+      var child = children[i];
+      if (child.nodeType === Node.TEXT_NODE) continue;
+      if (child.nodeType !== Node.ELEMENT_NODE) {
+        node.removeChild(child);
+        continue;
+      }
+      var tag = child.tagName;
+      if (!ALLOWED_TAGS.has(tag)) {
+        // Unwrap: keep children, remove container
+        var frag = document.createDocumentFragment();
+        while (child.firstChild) frag.appendChild(child.firstChild);
+        node.replaceChild(frag, child);
+        continue;
+      }
+      // Strip disallowed attributes
+      var allowed = KEEP_ATTRS[tag] || [];
+      var attrsToRemove = [];
+      for (var j = 0; j < child.attributes.length; j++) {
+        var attrName = child.attributes[j].name;
+        if (!allowed.includes(attrName)) {
+          attrsToRemove.push(attrName);
+        }
+      }
+      attrsToRemove.forEach(function(a) { child.removeAttribute(a); });
+      // Ensure links open externally (WKWebView will intercept)
+      if (tag === 'A') { child.setAttribute('target', '_blank'); }
+      cleanNode(child);
+    }
+  }
+
+  // ── External API (called from Swift) ──────────────────────
+
+  window.setHTML = function (html) {
+    editor.innerHTML = html || '';
+    reportHeight();
+  };
+
+  window.getHTML = function () {
+    return editor.innerHTML;
+  };
+
+  window.focusEditor = function () {
+    editor.focus();
+    // Move cursor to end
+    var range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+
+  // ── Initial height report ──────────────────────────────────
+  window.addEventListener('load', reportHeight);
+  var ro = new ResizeObserver(reportHeight);
+  ro.observe(editor);
+
+})();
+</script>
+</body>
+</html>

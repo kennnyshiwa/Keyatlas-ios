@@ -84,7 +84,6 @@ struct ProjectSubmissionView: View {
     @State private var title = ""
     @State private var slug = ""
     @State private var description = ""
-    @State private var originalRawDescription: String? = nil
     @State private var status: ProjectStatus = .interestCheck
     @State private var categoryId = ""
     @State private var estimatedDelivery = ""
@@ -144,8 +143,7 @@ struct ProjectSubmissionView: View {
         self.projectToEdit = projectToEdit
         _title = State(initialValue: projectToEdit?.title ?? "")
         _slug = State(initialValue: projectToEdit?.slug ?? "")
-        _description = State(initialValue: projectToEdit?.description?.keyAtlasDisplayText ?? "")
-        _originalRawDescription = State(initialValue: projectToEdit?.description)
+        _description = State(initialValue: projectToEdit?.description ?? "")
         _status = State(initialValue: projectToEdit?.status ?? .interestCheck)
         _categoryId = State(initialValue: projectToEdit?.categoryId ?? "")
         _profile = State(initialValue: projectToEdit?.profile ?? "")
@@ -430,7 +428,7 @@ struct ProjectSubmissionView: View {
     private var detailsSection: some View {
         Form {
             Section("Description") {
-                TextEditor(text: $description)
+                RichTextEditorView(html: $description)
                     .frame(minHeight: 200)
                     .accessibilityLabel("Project description")
             }
@@ -867,8 +865,7 @@ struct ProjectSubmissionView: View {
     private func duplicateFrom(_ project: Project) {
         title = project.title + " (Copy)"
         slug = ""  // Force new slug
-        description = project.description?.keyAtlasDisplayText ?? ""
-        originalRawDescription = project.description
+        description = project.description ?? ""
         status = project.status
         categoryId = project.categoryId ?? ""
         estimatedDelivery = project.estimatedDelivery ?? ""
@@ -992,17 +989,7 @@ struct ProjectSubmissionView: View {
         do {
             let targetSlug: String
             if let editSlug = projectToEdit?.slug {
-                let descriptionForUpdate: String? = {
-                    guard !description.isEmpty else { return nil }
-                    // Preserve original rich HTML when user did not actually change the text
-                    // in the iOS editor (which currently displays a plain-text projection).
-                    if let originalRawDescription,
-                       description == originalRawDescription.keyAtlasDisplayText {
-                        return originalRawDescription
-                    }
-                    // Never send plain text: convert edited plain text back into HTML.
-                    return description.keyAtlasPlainTextToHTML()
-                }()
+                let descriptionForUpdate: String? = description.isEmpty ? nil : description
 
                 let updateBody = UpdateBody(
                     title: title,
