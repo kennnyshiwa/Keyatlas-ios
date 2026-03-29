@@ -103,7 +103,7 @@ final class DiscoverViewModel: @unchecked Sendable {
                 .filter { $0.score > 0 }
                 .sorted { lhs, rhs in
                     if lhs.score == rhs.score {
-                        return lhs.project.updatedAt > rhs.project.updatedAt
+                        return (lhs.project.updatedAt ?? "") > (rhs.project.updatedAt ?? "")
                     }
                     return lhs.score > rhs.score
                 }
@@ -143,7 +143,7 @@ final class DiscoverViewModel: @unchecked Sendable {
             let ranked = response.data
                 .sorted { lhs, rhs in
                     if lhs.trendingScore == rhs.trendingScore {
-                        return lhs.updatedAt > rhs.updatedAt
+                        return (lhs.updatedAt ?? "") > (rhs.updatedAt ?? "")
                     }
                     return lhs.trendingScore > rhs.trendingScore
                 }

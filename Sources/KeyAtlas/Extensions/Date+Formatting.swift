@@ -66,7 +66,7 @@ extension Project {
     }
 
     var isRecentlyUpdated: Bool {
-        guard let date = updatedAt.asDate else { return false }
+        guard let date = updatedAt?.asDate else { return false }
         return date >= Calendar.current.date(byAdding: .day, value: -14, to: Date())!
     }
 
@@ -76,7 +76,7 @@ extension Project {
         let commentScore = commentCount * 2
 
         let recentBoost: Int
-        if let updated = updatedAt.asDate,
+        if let updated = updatedAt?.asDate,
            let days = Calendar.current.dateComponents([.day], from: updated, to: Date()).day {
             recentBoost = max(0, 14 - max(0, days))
         } else {
