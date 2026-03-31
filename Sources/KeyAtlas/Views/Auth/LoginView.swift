@@ -32,48 +32,36 @@ struct LoginView: View {
 
                     // OAuth buttons
                     VStack(spacing: 12) {
-                        Button {
+                        oauthButton(
+                            icon: "message.fill",
+                            title: "Continue with Discord",
+                            bg: Color(red: 0.34, green: 0.40, blue: 0.95),
+                            fg: .white
+                        ) {
                             Task { await signInWithDiscord() }
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "message.fill")
-                                    .font(.body)
-                                Text("Continue with Discord")
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color(red: 0.34, green: 0.40, blue: 0.95)) // Discord blurple
-                        .disabled(isOAuthLoading || authService.isLoading)
 
-                        Button {
+                        oauthButton(
+                            icon: "globe",
+                            title: "Continue with Google",
+                            bg: Color(.secondarySystemBackground),
+                            fg: .primary
+                        ) {
                             Task { await signInWithGoogle() }
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "globe")
-                                    .font(.body)
-                                Text("Continue with Google")
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
                         }
-                        .buttonStyle(.bordered)
-                        .disabled(isOAuthLoading || authService.isLoading)
 
+                        // Apple uses native button for compliance, styled to match
                         SignInWithAppleButton(.signIn) { request in
                             request.requestedScopes = [.fullName, .email]
                         } onCompletion: { result in
                             Task { await handleAppleCompletion(result) }
                         }
                         .signInWithAppleButtonStyle(.black)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .cornerRadius(8)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color(.separator), lineWidth: 1)
                         )
                         .disabled(isOAuthLoading || authService.isLoading)
                     }
@@ -144,6 +132,33 @@ struct LoginView: View {
                 SignUpView()
             }
         }
+    }
+
+    @ViewBuilder
+    private func oauthButton(
+        icon: String,
+        title: String,
+        bg: Color,
+        fg: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.body)
+                Text(title)
+                    .fontWeight(.semibold)
+            }
+            .foregroundStyle(fg)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(bg)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(.separator), lineWidth: 1)
+            )
+        }
+        .disabled(isOAuthLoading || authService.isLoading)
     }
 
     private func signIn() async {
