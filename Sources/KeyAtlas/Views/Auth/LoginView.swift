@@ -34,7 +34,7 @@ struct LoginView: View {
                     VStack(spacing: 12) {
                         oauthButton(
                             icon: "message.fill",
-                            title: "Continue with Discord",
+                            title: "Sign in with Discord",
                             bg: Color(red: 0.34, green: 0.40, blue: 0.95),
                             fg: .white
                         ) {
@@ -43,7 +43,7 @@ struct LoginView: View {
 
                         oauthButton(
                             icon: "globe",
-                            title: "Continue with Google",
+                            title: "Sign in with Google",
                             bg: Color(.secondarySystemBackground),
                             fg: .primary
                         ) {
