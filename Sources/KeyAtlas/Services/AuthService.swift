@@ -52,38 +52,35 @@ final class AuthService: @unchecked Sendable {
         await MainActor.run { self.isLoading = true }
         defer { Task { @MainActor in self.isLoading = false } }
 
-        // NextAuth uses CSRF token flow — get CSRF first
-        struct CSRFResponse: Codable, Hashable, Sendable {
-            let csrfToken: String
-        }
-
-        let csrf: CSRFResponse = try await api.request(path: "/api/auth/csrf")
-
-        struct SignInBody: Codable, Hashable, Sendable {
+        // Use the mobile login API endpoint (returns JSON with API key)
+        struct LoginBody: Codable, Hashable, Sendable {
             let email: String
             let password: String
-            let csrfToken: String
-            let redirect: Bool
-            let json: Bool
         }
 
-        let body = SignInBody(
-            email: email,
-            password: password,
-            csrfToken: csrf.csrfToken,
-            redirect: false,
-            json: true
-        )
+        struct LoginUser: Codable, Hashable, Sendable {
+            let id: String
+            let username: String?
+            let email: String
+            let role: String
+            let avatar: String?
+        }
 
-        struct SignInResponse: Codable, Hashable, Sendable {
-            let url: String?
-            let ok: Bool?
+        struct LoginData: Codable, Hashable, Sendable {
+            let apiKey: String
+            let user: LoginUser
+        }
+
+        struct LoginResponse: Codable, Hashable, Sendable {
+            let data: LoginData?
             let error: String?
         }
 
-        let response: SignInResponse = try await api.request(
+        let body = LoginBody(email: email, password: password)
+
+        let response: LoginResponse = try await api.request(
             .post,
-            path: "/api/auth/callback/credentials",
+            path: "/api/v1/auth/login",
             body: body
         )
 
@@ -91,11 +88,18 @@ final class AuthService: @unchecked Sendable {
             throw APIError.validation(error)
         }
 
-        // Fetch session after successful sign in
+        guard let loginData = response.data else {
+            throw APIError.validation("Sign in failed. Please check your credentials.")
+        }
+
+        // Store API key for authenticated requests
+        try KeychainService.save(loginData.apiKey, for: .authToken)
+
+        // Restore session using the new API key
         await restoreSession()
 
         if currentUser == nil {
-            throw APIError.validation("Sign in failed. Please check your credentials.")
+            throw APIError.validation("Sign in succeeded but session could not be restored.")
         }
     }
 

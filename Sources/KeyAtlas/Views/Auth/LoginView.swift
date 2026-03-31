@@ -62,6 +62,16 @@ struct LoginView: View {
                         }
                         .buttonStyle(.bordered)
                         .disabled(isOAuthLoading || authService.isLoading)
+
+                        SignInWithAppleButton(.signIn) { request in
+                            request.requestedScopes = [.fullName, .email]
+                        } onCompletion: { result in
+                            Task { await handleAppleCompletion(result) }
+                        }
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .cornerRadius(8)
+                        .disabled(isOAuthLoading || authService.isLoading)
                     }
                     .padding(.horizontal, 32)
 
@@ -169,6 +179,41 @@ struct LoginView: View {
                 return
             }
             self.error = error.localizedDescription
+        }
+    }
+
+    private func handleAppleCompletion(_ result: Result<ASAuthorization, Error>) async {
+        error = nil
+        isOAuthLoading = true
+        defer { isOAuthLoading = false }
+
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let identityToken = String(data: tokenData, encoding: .utf8)
+            else {
+                self.error = "Could not read Apple credential"
+                return
+            }
+            let givenName = credential.fullName?.givenName
+            let familyName = credential.fullName?.familyName
+            do {
+                let oauthResult = try await oauthService.exchangeAppleIdentityToken(
+                    identityToken: identityToken,
+                    givenName: givenName,
+                    familyName: familyName
+                )
+                try await authService.signInWithOAuth(result: oauthResult)
+            } catch {
+                self.error = error.localizedDescription
+            }
+
+        case .failure(let err):
+            if let authErr = err as? ASAuthorizationError, authErr.code == .canceled {
+                return
+            }
+            self.error = err.localizedDescription
         }
     }
 }
