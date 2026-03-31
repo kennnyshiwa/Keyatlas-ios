@@ -14,6 +14,10 @@ struct SettingsView: View {
     @State private var isSaving = false
     @State private var error: String?
     @State private var showSignOutConfirm = false
+    @State private var showDeleteWarning = false
+    @State private var showDeleteConfirmation = false
+    @State private var deleteConfirmationText = ""
+    @State private var isDeleting = false
 
     // Notification prefs
     @State private var notifyProjectStatusChanges = true
@@ -77,6 +81,13 @@ struct SettingsView: View {
                     }
                     .accessibilityLabel("Sign out")
                 }
+
+                Section {
+                    Button("Delete Account", role: .destructive) {
+                        showDeleteWarning = true
+                    }
+                    .disabled(isDeleting)
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -92,6 +103,30 @@ struct SettingsView: View {
                         dismiss()
                     }
                 }
+            }
+            .alert("Delete Account?", isPresented: $showDeleteWarning) {
+                Button("Cancel", role: .cancel) { }
+                Button("Continue", role: .destructive) {
+                    showDeleteConfirmation = true
+                }
+            } message: {
+                Text("This will permanently delete your account and all associated data. This action cannot be undone.")
+            }
+            .alert("Type DELETE to confirm", isPresented: $showDeleteConfirmation) {
+                TextField("Type DELETE", text: $deleteConfirmationText)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.characters)
+                Button("Cancel", role: .cancel) {
+                    deleteConfirmationText = ""
+                }
+                Button("Delete", role: .destructive) {
+                    if deleteConfirmationText == "DELETE" {
+                        Task { await deleteAccount() }
+                    }
+                    deleteConfirmationText = ""
+                }
+            } message: {
+                Text("Type DELETE to permanently remove your account.")
             }
             .onChange(of: selectedPhoto) { _, item in
                 Task {
@@ -147,6 +182,28 @@ struct SettingsView: View {
             body: UpdateBody(type: type, inApp: enabled, email: enabled),
             authenticated: true
         ) as EmptyResponse
+    }
+
+    private func deleteAccount() async {
+        isDeleting = true
+        defer { isDeleting = false }
+
+        struct DeleteBody: Codable, Sendable {
+            let confirmation: String
+        }
+
+        do {
+            try await APIClient.shared.requestVoid(
+                .delete,
+                path: "/api/v1/users/me",
+                body: DeleteBody(confirmation: "DELETE"),
+                authenticated: true
+            )
+            await authService.signOut()
+            dismiss()
+        } catch {
+            self.error = "Failed to delete account: \(error.localizedDescription)"
+        }
     }
 
     private func saveProfile() async {
