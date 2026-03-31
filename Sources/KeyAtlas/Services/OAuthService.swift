@@ -145,7 +145,7 @@ func appleBackendExchange(
         let fullName: AppleFullName?
     }
 
-    struct AppleResponseBody: Decodable {
+    struct AppleResponseBody: Codable {
         let token: String
         let user_id: String
         let username: String
