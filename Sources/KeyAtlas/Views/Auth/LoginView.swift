@@ -71,6 +71,10 @@ struct LoginView: View {
                         .signInWithAppleButtonStyle(.black)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
                         .disabled(isOAuthLoading || authService.isLoading)
                     }
                     .padding(.horizontal, 32)
