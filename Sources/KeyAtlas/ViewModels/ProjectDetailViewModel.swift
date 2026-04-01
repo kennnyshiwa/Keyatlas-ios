@@ -10,6 +10,9 @@ final class ProjectDetailViewModel: @unchecked Sendable {
     var isTogglingCollection = false
     var commentText = ""
     var isPostingComment = false
+    var replyingToCommentId: String?
+    var replyText = ""
+    var isPostingReply = false
     var followConfirmationMessage: String?
     var relatedProjects: [Project] = []
 
@@ -135,6 +138,33 @@ final class ProjectDetailViewModel: @unchecked Sendable {
                 body: CommentBody(content: commentText)
             )
             await MainActor.run { self.commentText = "" }
+            await loadProject(slug: project.slug)
+        } catch {
+            await MainActor.run { self.error = error.localizedDescription }
+        }
+    }
+
+    func postReply() async {
+        guard let project, let parentId = replyingToCommentId,
+              !replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        await MainActor.run { self.isPostingReply = true }
+        defer { Task { @MainActor in self.isPostingReply = false } }
+
+        struct ReplyBody: Codable, Hashable, Sendable {
+            let content: String
+            let parentId: String
+        }
+
+        do {
+            try await api.requestVoid(
+                .post,
+                path: "/api/v1/projects/\(project.slug)/comments",
+                body: ReplyBody(content: replyText, parentId: parentId)
+            )
+            await MainActor.run {
+                self.replyText = ""
+                self.replyingToCommentId = nil
+            }
             await loadProject(slug: project.slug)
         } catch {
             await MainActor.run { self.error = error.localizedDescription }

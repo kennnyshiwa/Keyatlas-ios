@@ -723,20 +723,62 @@ struct ProjectDetailView: View {
             Text("Comments")
                 .font(.headline)
 
-            // Comment input
-            HStack {
-                TextField("Add a comment…", text: $viewModel.commentText, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...4)
-                    .accessibilityLabel("Comment text field")
-
-                Button {
-                    Task { await viewModel.postComment() }
-                } label: {
-                    Image(systemName: "paperplane.fill")
+            // Reply indicator
+            if let replyId = viewModel.replyingToCommentId,
+               let parent = project.comments?.first(where: { $0.id == replyId }) {
+                HStack {
+                    Image(systemName: "arrowshape.turn.up.left.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.accentColor)
+                    Text("Replying to @\(parent.author?.displayName ?? "Anonymous")")
+                        .font(.caption)
+                        .foregroundStyle(Color.accentColor)
+                    Spacer()
+                    Button {
+                        viewModel.replyingToCommentId = nil
+                        viewModel.replyText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel("Cancel reply")
                 }
-                .disabled(viewModel.commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isPostingComment)
-                .accessibilityLabel("Post comment")
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Color.accentColor.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            // Comment / reply input
+            HStack {
+                if viewModel.replyingToCommentId != nil {
+                    TextField("Write a reply…", text: $viewModel.replyText, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(1...4)
+                        .accessibilityLabel("Reply text field")
+
+                    Button {
+                        Task { await viewModel.postReply() }
+                    } label: {
+                        Image(systemName: "paperplane.fill")
+                    }
+                    .disabled(viewModel.replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isPostingReply)
+                    .accessibilityLabel("Post reply")
+                } else {
+                    TextField("Add a comment…", text: $viewModel.commentText, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(1...4)
+                        .accessibilityLabel("Comment text field")
+
+                    Button {
+                        Task { await viewModel.postComment() }
+                    } label: {
+                        Image(systemName: "paperplane.fill")
+                    }
+                    .disabled(viewModel.commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isPostingComment)
+                    .accessibilityLabel("Post comment")
+                }
             }
 
             // Comment list
@@ -748,23 +790,60 @@ struct ProjectDetailView: View {
                 } else {
                     ForEach(comments) { comment in
                         VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                AvatarImage(url: comment.author?.effectiveAvatarUrl, size: 24)
-                                Text(comment.author?.displayName ?? "Anonymous")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                Spacer()
-                                Text(comment.createdAt.relativeTime)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                            commentRow(comment)
+
+                            // Reply button
+                            Button {
+                                viewModel.replyingToCommentId = comment.id
+                                viewModel.replyText = ""
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrowshape.turn.up.left")
+                                        .font(.caption2)
+                                    Text("Reply")
+                                        .font(.caption2)
+                                }
+                                .foregroundStyle(.secondary)
                             }
-                            RichCommentView(content: comment.content)
+                            .accessibilityLabel("Reply to comment by \(comment.author?.displayName ?? "Anonymous")")
+
+                            // Nested replies
+                            if let replies = comment.replies, !replies.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    ForEach(replies) { reply in
+                                        commentRow(reply)
+                                    }
+                                }
+                                .padding(.leading, 16)
+                                .overlay(
+                                    Rectangle()
+                                        .fill(Color.accentColor.opacity(0.3))
+                                        .frame(width: 2),
+                                    alignment: .leading
+                                )
+                            }
                         }
                         .padding(.vertical, 4)
                         Divider()
                     }
                 }
             }
+        }
+    }
+
+    private func commentRow(_ comment: Comment) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                AvatarImage(url: comment.author?.effectiveAvatarUrl, size: 24)
+                Text(comment.author?.displayName ?? "Anonymous")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                Spacer()
+                Text(comment.createdAt.relativeTime)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            RichCommentView(content: comment.content)
         }
     }
 }

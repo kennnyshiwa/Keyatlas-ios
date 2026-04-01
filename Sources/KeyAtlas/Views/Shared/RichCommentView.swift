@@ -13,8 +13,7 @@ struct RichCommentView: View {
                 switch part {
                 case .text(let text):
                     if !text.isEmpty {
-                        Text(text)
-                            .font(.subheadline)
+                        styledMentionText(text)
                     }
                 case .image(let url):
                     CachedImage(url: url, contentMode: .fit)
@@ -25,6 +24,41 @@ struct RichCommentView: View {
         }
     }
 
+    /// Renders text with @mentions highlighted in accent color
+    private func styledMentionText(_ text: String) -> Text {
+        let mentionPattern = try! NSRegularExpression(pattern: #"@\w+"#)
+        let nsText = text as NSString
+        let matches = mentionPattern.matches(in: text, range: NSRange(location: 0, length: nsText.length))
+
+        if matches.isEmpty {
+            return Text(text).font(.subheadline)
+        }
+
+        var result = Text("")
+        var cursor = 0
+
+        for match in matches {
+            let matchRange = match.range
+            // Text before mention
+            if matchRange.location > cursor {
+                let before = nsText.substring(with: NSRange(location: cursor, length: matchRange.location - cursor))
+                result = result + Text(before).font(.subheadline)
+            }
+            // The mention itself
+            let mention = nsText.substring(with: matchRange)
+            result = result + Text(mention).font(.subheadline).foregroundColor(.accentColor).fontWeight(.medium)
+            cursor = matchRange.location + matchRange.length
+        }
+
+        // Trailing text
+        if cursor < nsText.length {
+            let trailing = nsText.substring(from: cursor)
+            result = result + Text(trailing).font(.subheadline)
+        }
+
+        return result
+    }
+
     private enum ContentPart {
         case text(String)
         case image(String)
@@ -32,7 +66,22 @@ struct RichCommentView: View {
 
     private func parseContent(_ html: String) -> [ContentPart] {
         var parts: [ContentPart] = []
-        var remaining = html
+
+        // Pre-process: replace mention <a> tags with plain @mention text before stripping
+        let mentionPattern = try! NSRegularExpression(
+            pattern: #"<a[^>]*data-mention="([^"]*)"[^>]*>[^<]*</a>"#,
+            options: .caseInsensitive
+        )
+        var preprocessed = html
+        let mentionMatches = mentionPattern.matches(in: preprocessed, range: NSRange(location: 0, length: (preprocessed as NSString).length))
+        for match in mentionMatches.reversed() {
+            let fullRange = Range(match.range, in: preprocessed)!
+            let usernameRange = Range(match.range(at: 1), in: preprocessed)!
+            let username = String(preprocessed[usernameRange])
+            preprocessed.replaceSubrange(fullRange, with: "@\(username)")
+        }
+
+        var remaining = preprocessed
 
         // Pattern to find <img ... src="..." ...> tags
         let imgPattern = try! NSRegularExpression(

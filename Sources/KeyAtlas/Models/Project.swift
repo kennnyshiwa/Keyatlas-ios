@@ -183,9 +183,10 @@ struct Comment: Codable, Identifiable, Hashable, Sendable {
     let createdAt: String
     let updatedAt: String?
     let author: UserSummary?
+    let replies: [Comment]?
 
     enum CodingKeys: String, CodingKey {
-        case id, content, author
+        case id, content, author, replies
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
