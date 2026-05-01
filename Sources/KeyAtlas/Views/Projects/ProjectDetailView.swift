@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Full project detail view
 struct ProjectDetailView: View {
@@ -27,33 +26,10 @@ struct ProjectDetailView: View {
         .toolbar {
             if let project = viewModel.project {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Menu {
-                        ShareLink(
-                            item: shareURL(for: project, ref: "ios_share"),
-                            subject: Text(project.displayTitle),
-                            message: Text(shareMessage(for: project, ref: "ios_share"))
-                        ) {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                        }
-
-                        Button {
-                            copyShareMessage(project: project, ref: "ios_share")
-                        } label: {
-                            Label("Copy message", systemImage: "doc.on.doc")
-                        }
-
-                        Button {
-                            copyShareMessage(project: project, ref: "ios_discord")
-                        } label: {
-                            Label("Copy Discord message", systemImage: "bubble.left.and.bubble.right")
-                        }
-
-                        Button {
-                            copyShareMessage(project: project, ref: "ios_reddit")
-                        } label: {
-                            Label("Copy Reddit message", systemImage: "text.bubble")
-                        }
-                    } label: {
+                    ShareLink(
+                        item: shareURL(for: project, ref: "ios_share"),
+                        subject: Text(project.displayTitle)
+                    ) {
                         Image(systemName: "square.and.arrow.up")
                     }
                     .accessibilityLabel("Share project")
@@ -590,13 +566,6 @@ struct ProjectDetailView: View {
         return components.url ?? URL(string: "https://keyatlas.io/projects/\(project.slug)")!
     }
 
-    private func shareMessage(for project: Project, ref: String) -> String {
-        return shareURL(for: project, ref: ref).absoluteString
-    }
-
-    private func copyShareMessage(project: Project, ref: String) {
-        UIPasteboard.general.string = shareMessage(for: project, ref: ref)
-    }
 
     private func canQuickEdit(project: Project) -> Bool {
         guard let me = authService.currentUser else { return false }
