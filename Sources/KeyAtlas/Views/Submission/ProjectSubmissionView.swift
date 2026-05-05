@@ -161,6 +161,10 @@ struct ProjectSubmissionView: View {
 
     private let sections = ["Import", "Basic Info", "Details", "Media", "Vendors", "Pricing & Dates", "Sound Tests"]
 
+    private var isEditingExistingProject: Bool {
+        projectToEdit != nil
+    }
+
     private var draftKey: String {
         if let slug = projectToEdit?.slug { return "draft-\(slug)" }
         return "draft-new"
@@ -258,6 +262,7 @@ struct ProjectSubmissionView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         autosaveTask?.cancel()
+                        discardUnsavedChanges()
                         dismiss()
                     }
                 }
@@ -287,6 +292,7 @@ struct ProjectSubmissionView: View {
                 await loadCategories()
                 await loadProfiles()
                 await loadVendors()
+                cleanupLegacyEditDraftIfNeeded()
                 checkForSavedDraft()
             }
             .alert("Restore Draft?", isPresented: $showRestoreDraftAlert) {
@@ -1378,6 +1384,7 @@ struct ProjectSubmissionView: View {
     // MARK: - Autosave
 
     private func scheduleAutosave() {
+        guard !isEditingExistingProject else { return }
         autosaveTask?.cancel()
         autosaveTask = Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds debounce
@@ -1387,6 +1394,7 @@ struct ProjectSubmissionView: View {
     }
 
     private func saveDraft() {
+        guard !isEditingExistingProject else { return }
         let draft = ProjectDraft(
             title: title,
             slug: slug,
@@ -1406,8 +1414,7 @@ struct ProjectSubmissionView: View {
     }
 
     private func checkForSavedDraft() {
-        // Only check for saved drafts in new project mode
-        guard projectToEdit == nil else { return }
+        guard !isEditingExistingProject else { return }
         guard let data = UserDefaults.standard.data(forKey: draftKey),
               let draft = try? JSONDecoder().decode(ProjectDraft.self, from: data),
               !draft.title.isEmpty else { return }
@@ -1415,6 +1422,7 @@ struct ProjectSubmissionView: View {
     }
 
     private func restoreDraft() {
+        guard !isEditingExistingProject else { return }
         guard let data = UserDefaults.standard.data(forKey: draftKey),
               let draft = try? JSONDecoder().decode(ProjectDraft.self, from: data) else { return }
         title = draft.title
@@ -1428,6 +1436,18 @@ struct ProjectSubmissionView: View {
         gbStartDate = draft.gbStartDate
         gbEndDate = draft.gbEndDate
         showDatePickers = draft.showDatePickers
+    }
+
+    private func discardUnsavedChanges() {
+        guard isEditingExistingProject else { return }
+        cleanupLegacyEditDraftIfNeeded()
+        activeDateField = nil
+        newTag = ""
+    }
+
+    private func cleanupLegacyEditDraftIfNeeded() {
+        guard isEditingExistingProject else { return }
+        UserDefaults.standard.removeObject(forKey: draftKey)
     }
 
     private func clearDraft() {
