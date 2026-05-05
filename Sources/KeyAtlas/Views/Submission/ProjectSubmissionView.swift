@@ -20,6 +20,26 @@ private struct ProjectDraft: Codable {
     var showDatePickers: Bool
 }
 
+private struct EditableProjectLink: Identifiable, Hashable {
+    let id = UUID()
+    var title: String
+    var url: String
+}
+
+private enum SubmissionDateField: String, Identifiable {
+    case start
+    case end
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .start: return "Start Date"
+        case .end: return "End Date"
+        }
+    }
+}
+
 // MARK: - URL Import Response
 
 private struct ImportSummary {
@@ -79,6 +99,7 @@ private struct KeycapProfilesResponse: Codable, Sendable {
 
 struct ProjectSubmissionView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AuthService.self) private var authService
     private let projectToEdit: Project?
 
     @State private var title = ""
@@ -95,6 +116,11 @@ struct ProjectSubmissionView: View {
 
     @State private var profile = ""
     @State private var profiles: [String] = []
+    @State private var tags: [String] = []
+    @State private var newTag = ""
+    @State private var links: [EditableProjectLink] = []
+    @State private var isFeatured = false
+    @State private var isPublished = false
 
     @State private var heroPhoto: PhotosPickerItem?
     @State private var heroImageData: Data?
@@ -119,6 +145,7 @@ struct ProjectSubmissionView: View {
     @State private var importError: String?
     @State private var showImportError = false
     @State private var importSummary: ImportSummary?
+    @State private var activeDateField: SubmissionDateField?
 
     // Autosave
     @State private var autosaveTask: Task<Void, Never>?
@@ -148,6 +175,12 @@ struct ProjectSubmissionView: View {
         _categoryId = State(initialValue: projectToEdit?.categoryId ?? "")
         _profile = State(initialValue: projectToEdit?.profile ?? "")
         _estimatedDelivery = State(initialValue: projectToEdit?.estimatedDelivery ?? "")
+        _tags = State(initialValue: projectToEdit?.tags ?? [])
+        _links = State(initialValue: (projectToEdit?.links ?? []).map {
+            EditableProjectLink(title: $0.title, url: $0.url)
+        })
+        _isFeatured = State(initialValue: projectToEdit?.isFeatured ?? false)
+        _isPublished = State(initialValue: projectToEdit?.published ?? false)
         if let min = projectToEdit?.pricing?.minPrice {
             _minPrice = State(initialValue: String(Double(min) / 100.0))
         }
@@ -278,6 +311,29 @@ struct ProjectSubmissionView: View {
             }
             .sheet(isPresented: $showDuplicateSheet) {
                 duplicatePickerView
+            }
+            .sheet(item: $activeDateField) { field in
+                NavigationStack {
+                    VStack {
+                        DatePicker(
+                            field.title,
+                            selection: dateBinding(for: field),
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .padding()
+
+                        Spacer()
+                    }
+                    .navigationTitle(field.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { activeDateField = nil }
+                        }
+                    }
+                }
             }
             // Autosave trigger
             .onChange(of: title) { _, _ in scheduleAutosave() }
@@ -437,6 +493,87 @@ struct ProjectSubmissionView: View {
                 TextField("e.g. Q3 2026", text: $estimatedDelivery)
                     .accessibilityLabel("Estimated delivery")
             }
+
+            Section("Tags") {
+                HStack {
+                    TextField("Add tag", text: $newTag)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onSubmit(addTag)
+                        .accessibilityLabel("Add tag")
+
+                    Button("Add", action: addTag)
+                        .disabled(newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+
+                if tags.isEmpty {
+                    Text("No tags added yet.")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(tags, id: \.self) { tag in
+                                HStack(spacing: 6) {
+                                    Text(tag)
+                                        .font(.subheadline)
+                                    Button {
+                                        removeTag(tag)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.secondary.opacity(0.12))
+                                .clipShape(Capsule())
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+
+            Section("Links") {
+                if links.isEmpty {
+                    Text("No links added yet.")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                } else {
+                    ForEach($links) { $link in
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField("Link label", text: $link.title)
+                                .accessibilityLabel("Link label")
+                            TextField("https://...", text: $link.url)
+                                .keyboardType(.URL)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .accessibilityLabel("Link URL")
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .onDelete { offsets in
+                        links.remove(atOffsets: offsets)
+                    }
+                }
+
+                Button {
+                    links.append(EditableProjectLink(title: "", url: ""))
+                } label: {
+                    Label("Add Link", systemImage: "plus.circle")
+                }
+                .accessibilityLabel("Add project link")
+            }
+
+            if isAdminEditing {
+                Section("Project Settings") {
+                    Toggle("Published", isOn: $isPublished)
+                    Toggle("Featured", isOn: $isFeatured)
+                }
+            }
         }
     }
 
@@ -546,10 +683,31 @@ struct ProjectSubmissionView: View {
             Section("Group Buy Dates") {
                 Toggle("Set GB dates", isOn: $showDatePickers)
                 if showDatePickers {
-                    DatePicker("Start Date", selection: $gbStartDate, displayedComponents: .date)
-                        .accessibilityLabel("Group buy start date")
-                    DatePicker("End Date", selection: $gbEndDate, displayedComponents: .date)
-                        .accessibilityLabel("Group buy end date")
+                    Button {
+                        activeDateField = .start
+                    } label: {
+                        HStack {
+                            Text("Start Date")
+                            Spacer()
+                            Text(formattedSubmissionDate(gbStartDate))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Group buy start date")
+
+                    Button {
+                        activeDateField = .end
+                    } label: {
+                        HStack {
+                            Text("End Date")
+                            Spacer()
+                            Text(formattedSubmissionDate(gbEndDate))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Group buy end date")
                 }
             }
         }
@@ -833,6 +991,9 @@ struct ProjectSubmissionView: View {
                 + ((result.tags?.isEmpty == false) ? 1 : 0)
                 + (((result.gbStartDate?.isEmpty == false) || (result.gbEndDate?.isEmpty == false)) ? 1 : 0)
 
+            mergeImportedTags(result.tags ?? [])
+            mergeImportedLinks(result.links ?? [])
+
             importSummary = ImportSummary(
                 fieldsPrefilled: fieldsPrefilled,
                 linksDetected: linksDetected,
@@ -873,6 +1034,10 @@ struct ProjectSubmissionView: View {
         if let max = project.pricing?.maxPrice { maxPrice = String(Double(max) / 100.0) }
         if let start = project.gbStartDate?.asDate { gbStartDate = start; showDatePickers = true }
         if let end = project.gbEndDate?.asDate { gbEndDate = end; showDatePickers = true }
+        tags = project.tags ?? []
+        links = (project.links ?? []).map { EditableProjectLink(title: $0.title, url: $0.url) }
+        isFeatured = false
+        isPublished = false
 
         // Generate new slug from new title
         slug = generateSlug(from: title)
@@ -922,6 +1087,12 @@ struct ProjectSubmissionView: View {
             let storeLink: String
         }
 
+        struct LinkSubmitEntry: Codable, Hashable, Sendable {
+            let label: String
+            let url: String
+            let type: String
+        }
+
         struct SoundTestSubmitEntry: Codable, Hashable, Sendable {
             let url: String
             let title: String?
@@ -942,8 +1113,12 @@ struct ProjectSubmissionView: View {
             let priceMax: Int?
             let gbStartDate: String?
             let gbEndDate: String?
+            let tags: [String]
+            let links: [LinkSubmitEntry]
             let projectVendors: [VendorSubmitEntry]
             let soundTests: [SoundTestSubmitEntry]
+            let featured: Bool
+            let published: Bool
         }
 
         // PATCH /api/v1/projects/:slug uses snake_case field names
@@ -959,9 +1134,15 @@ struct ProjectSubmissionView: View {
             let maxPrice: Int?
             let gbStartDate: String?
             let gbEndDate: String?
+            let tags: [String]
+            let links: [LinkSubmitEntry]
+            let projectVendors: [VendorSubmitEntry]
+            let featured: Bool
+            let published: Bool
 
             enum CodingKeys: String, CodingKey {
                 case title, description, status, profile
+                case tags, links, featured, published
                 case categoryId = "category_id"
                 case heroImageUrl = "hero_image_url"
                 case estimatedDelivery = "estimated_delivery"
@@ -969,6 +1150,7 @@ struct ProjectSubmissionView: View {
                 case maxPrice = "max_price"
                 case gbStartDate = "gb_start_date"
                 case gbEndDate = "gb_end_date"
+                case projectVendors = "project_vendors"
             }
         }
 
@@ -986,6 +1168,23 @@ struct ProjectSubmissionView: View {
             )
         }
 
+        let linkEntries = links
+            .map { entry in
+                let trimmedURL = entry.url.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmedLabel = entry.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                let fallbackLabel = urlHostDisplay(for: trimmedURL)
+                return LinkSubmitEntry(
+                    label: trimmedLabel.isEmpty ? fallbackLabel : trimmedLabel,
+                    url: trimmedURL,
+                    type: detectLinkType(url: trimmedURL)
+                )
+            }
+            .filter { !$0.url.isEmpty }
+
+        let normalizedTags = tags
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
         do {
             let targetSlug: String
             if let editSlug = projectToEdit?.slug {
@@ -1002,7 +1201,12 @@ struct ProjectSubmissionView: View {
                     minPrice: minPrice.isEmpty ? nil : Int((Double(minPrice) ?? 0) * 100),
                     maxPrice: maxPrice.isEmpty ? nil : Int((Double(maxPrice) ?? 0) * 100),
                     gbStartDate: showDatePickers ? df.string(from: gbStartDate) : nil,
-                    gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil
+                    gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil,
+                    tags: normalizedTags,
+                    links: linkEntries,
+                    projectVendors: vendorEntries,
+                    featured: isFeatured,
+                    published: isPublished
                 )
                 try await APIClient.shared.requestVoid(.patch, path: "/api/v1/projects/\(editSlug)", body: updateBody)
                 targetSlug = editSlug
@@ -1020,6 +1224,8 @@ struct ProjectSubmissionView: View {
                     priceMax: Int((Double(maxPrice) ?? 0) * 100),
                     gbStartDate: showDatePickers ? df.string(from: gbStartDate) : nil,
                     gbEndDate: showDatePickers ? df.string(from: gbEndDate) : nil,
+                    tags: normalizedTags,
+                    links: linkEntries,
                     projectVendors: vendorEntries,
                     soundTests: soundTestEntries
                         .filter { !$0.url.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -1027,7 +1233,9 @@ struct ProjectSubmissionView: View {
                             url: $0.url.trimmingCharacters(in: .whitespaces),
                             title: $0.title.isEmpty ? nil : $0.title,
                             platform: detectPlatform(url: $0.url)
-                        )}
+                        )},
+                    featured: isFeatured,
+                    published: isPublished
                 )
                 try await APIClient.shared.requestVoid(.post, path: "/api/projects", body: createBody)
                 targetSlug = slug
@@ -1085,6 +1293,80 @@ struct ProjectSubmissionView: View {
         if url.contains("youtube.com") || url.contains("youtu.be") { return "youtube" }
         if url.contains("streamable.com") { return "streamable" }
         return "other"
+    }
+
+    private func detectLinkType(url: String) -> String {
+        let lower = url.lowercased()
+        if lower.contains("geekhack.org") { return "GEEKHACK" }
+        if lower.contains("discord.gg") || lower.contains("discord.com") { return "DISCORD" }
+        if lower.contains("instagram.com") { return "INSTAGRAM" }
+        if lower.contains("reddit.com") || lower.contains("redd.it") { return "REDDIT" }
+        if lower.contains("store") || lower.contains("shop") { return "STORE" }
+        if lower.contains("http://") || lower.contains("https://") { return "WEBSITE" }
+        return "OTHER"
+    }
+
+    private func formattedSubmissionDate(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    private func dateBinding(for field: SubmissionDateField) -> Binding<Date> {
+        switch field {
+        case .start:
+            return $gbStartDate
+        case .end:
+            return $gbEndDate
+        }
+    }
+
+    private var isAdminEditing: Bool {
+        authService.currentUser?.isAdmin == true
+    }
+
+    private func addTag() {
+        let incoming = newTag
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        for tag in incoming where !tags.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
+            tags.append(tag)
+        }
+
+        newTag = ""
+    }
+
+    private func removeTag(_ tag: String) {
+        tags.removeAll { $0 == tag }
+    }
+
+    private func mergeImportedTags(_ importedTags: [String]) {
+        for tag in importedTags {
+            let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            if !tags.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+                tags.append(trimmed)
+            }
+        }
+    }
+
+    private func mergeImportedLinks(_ importedLinks: [URLImportResponse.ImportedLink]) {
+        for link in importedLinks {
+            let trimmedURL = link.url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !trimmedURL.isEmpty else { continue }
+            if links.contains(where: { $0.url == trimmedURL }) { continue }
+            links.append(
+                EditableProjectLink(
+                    title: link.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
+                    url: trimmedURL
+                )
+            )
+        }
+    }
+
+    private func urlHostDisplay(for url: String) -> String {
+        guard let host = URL(string: url)?.host else { return "Link" }
+        return host.replacingOccurrences(of: "www.", with: "")
     }
 
     private func generateSlug(from text: String) -> String {
