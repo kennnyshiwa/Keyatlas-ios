@@ -105,7 +105,6 @@ struct RichTextEditorView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
 
         let webView = AutoHeightWebView(minHeight: minHeight, coordinator: context.coordinator)
-        webView.configuration.userContentController // already set above via config
 
         // Appearance
         webView.isOpaque = false
@@ -178,5 +177,174 @@ private final class AutoHeightWebView: WKWebView {
     override var intrinsicContentSize: CGSize {
         let height = coordinator?.lastReportedHeight ?? minHeight
         return CGSize(width: UIView.noIntrinsicMetric, height: max(minHeight, height))
+    }
+}
+
+struct HTMLContentView: View {
+    let html: String
+    @State private var contentHeight: CGFloat = 100
+
+    var body: some View {
+        HTMLContentWebView(html: html, contentHeight: $contentHeight)
+            .frame(height: contentHeight)
+    }
+}
+
+struct HTMLContentWebView: UIViewRepresentable {
+    let html: String
+    @Binding var contentHeight: CGFloat
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.userContentController.add(context.coordinator, name: "contentHeight")
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bounces = false
+        webView.navigationDelegate = context.coordinator
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        let styledHTML = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                font-size: 16px;
+                line-height: 1.6;
+                color: #1a1a1a;
+                padding: 0;
+                -webkit-text-size-adjust: 100%;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+            }
+            @media (prefers-color-scheme: dark) {
+                body { color: #e5e5e5; }
+                h1, h2, h3 { color: #ffffff; }
+                details { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+            }
+            h1 { font-size: 24px; font-weight: 700; margin: 24px 0 12px 0; }
+            h2 { font-size: 20px; font-weight: 700; margin: 24px 0 12px 0; }
+            h3 { font-size: 17px; font-weight: 600; margin: 20px 0 8px 0; }
+            p { margin: 8px 0; }
+            ul, ol { margin: 8px 0; padding-left: 24px; }
+            li { margin: 4px 0; }
+            blockquote {
+                margin: 12px 0;
+                padding: 10px 14px;
+                border-left: 3px solid #0a84ff;
+                background: rgba(10,132,255,0.08);
+                border-radius: 0 8px 8px 0;
+            }
+            img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; display: block; }
+            a { color: #0a84ff; text-decoration: underline; }
+            details {
+                margin: 12px 0;
+                border: 1px solid rgba(60,60,67,0.18);
+                border-radius: 12px;
+                background: rgba(120,120,128,0.08);
+                overflow: hidden;
+            }
+            summary {
+                cursor: pointer;
+                padding: 12px 14px;
+                font-weight: 600;
+                list-style-position: inside;
+            }
+            details > :not(summary) {
+                padding: 0 14px 14px;
+            }
+        </style>
+        </head>
+        <body>\(html)</body>
+        </html>
+        """
+        webView.loadHTMLString(styledHTML, baseURL: URL(string: "https://keyatlas.io"))
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        let parent: HTMLContentWebView
+        init(parent: HTMLContentWebView) { self.parent = parent }
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard message.name == "contentHeight" else { return }
+
+            let rawHeight: CGFloat?
+            switch message.body {
+            case let number as NSNumber:
+                rawHeight = CGFloat(truncating: number)
+            case let doubleValue as Double:
+                rawHeight = CGFloat(doubleValue)
+            case let intValue as Int:
+                rawHeight = CGFloat(intValue)
+            default:
+                rawHeight = nil
+            }
+
+            guard let rawHeight, rawHeight > 0 else { return }
+            DispatchQueue.main.async {
+                self.parent.contentHeight = rawHeight
+            }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            let installReporter = """
+            (function() {
+                const postHeight = () => {
+                    const body = document.body;
+                    const doc = document.documentElement;
+                    const height = Math.max(
+                        body ? body.scrollHeight : 0,
+                        doc ? doc.scrollHeight : 0,
+                        body ? body.offsetHeight : 0,
+                        doc ? doc.offsetHeight : 0
+                    );
+                    window.webkit.messageHandlers.contentHeight.postMessage(height);
+                };
+
+                postHeight();
+                requestAnimationFrame(postHeight);
+                setTimeout(postHeight, 100);
+                setTimeout(postHeight, 400);
+                setTimeout(postHeight, 1000);
+
+                if (window.__kaHeightObserver) {
+                    window.__kaHeightObserver.disconnect();
+                }
+
+                const observer = new ResizeObserver(postHeight);
+                observer.observe(document.body);
+                window.__kaHeightObserver = observer;
+
+                document.querySelectorAll("img").forEach((img) => {
+                    if (img.complete) return;
+                    img.addEventListener("load", postHeight, { once: true });
+                    img.addEventListener("error", postHeight, { once: true });
+                });
+            })();
+            """
+
+            webView.evaluateJavaScript(installReporter) { [weak self] _, _ in
+                webView.evaluateJavaScript("Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)") { result, _ in
+                    if let height = result as? CGFloat, height > 0 {
+                        DispatchQueue.main.async {
+                            self?.parent.contentHeight = height
+                        }
+                    } else if let height = result as? NSNumber {
+                        DispatchQueue.main.async {
+                            self?.parent.contentHeight = CGFloat(truncating: height)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

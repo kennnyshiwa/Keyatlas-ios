@@ -87,6 +87,7 @@ struct SettingsView: View {
                         showDeleteWarning = true
                     }
                     .disabled(isDeleting)
+                    .accessibilityLabel("Delete account")
                 }
             }
             .navigationTitle("Settings")
@@ -122,6 +123,8 @@ struct SettingsView: View {
                 Button("Delete", role: .destructive) {
                     if deleteConfirmationText == "DELETE" {
                         Task { await deleteAccount() }
+                    } else {
+                        error = "Please type DELETE exactly to confirm account deletion."
                     }
                     deleteConfirmationText = ""
                 }

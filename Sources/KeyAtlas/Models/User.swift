@@ -5,19 +5,39 @@ struct UserSummary: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let username: String?
     let name: String?
+    let displayNameValue: String?
     let avatarUrl: String?
     let image: String?
     let role: String?
 
     enum CodingKeys: String, CodingKey {
         case id, username, name, image, role
+        case displayNameValue = "displayName"
         case avatarUrl = "avatar_url"
+    }
+
+    init(
+        id: String,
+        username: String?,
+        name: String?,
+        displayNameValue: String? = nil,
+        avatarUrl: String?,
+        image: String?,
+        role: String?
+    ) {
+        self.id = id
+        self.username = username
+        self.name = name
+        self.displayNameValue = displayNameValue
+        self.avatarUrl = avatarUrl
+        self.image = image
+        self.role = role
     }
 
     var isAdmin: Bool { role == "ADMIN" }
 
     var displayName: String {
-        username ?? name ?? "Unknown"
+        displayNameValue ?? username ?? name ?? "Unknown"
     }
 
     var effectiveAvatarUrl: String? {

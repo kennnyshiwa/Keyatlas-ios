@@ -61,8 +61,8 @@ final class ThreadDetailViewModel: @unchecked Sendable {
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            let thread: ForumThread = try await api.request(path: "/api/v1/forums/threads/\(id)")
-            await MainActor.run { self.thread = thread }
+            let response: DataWrapper<ForumThread> = try await api.request(path: "/api/v1/forums/threads/\(id)")
+            await MainActor.run { self.thread = response.data }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }
         }

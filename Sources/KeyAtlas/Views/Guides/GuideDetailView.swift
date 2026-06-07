@@ -1,5 +1,4 @@
 import SwiftUI
-import WebKit
 
 struct GuideDetailView: View {
     let slug: String
@@ -57,7 +56,7 @@ struct GuideDetailView: View {
                             }
 
                             if let content = guide.content, !content.isEmpty {
-                                DynamicHTMLView(html: content)
+                                HTMLContentView(html: content)
                             }
                         }
                         .padding()
@@ -69,7 +68,7 @@ struct GuideDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if canEdit, let guide = viewModel.selectedGuide {
+            if canEdit, viewModel.selectedGuide != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showEditSheet = true
@@ -87,86 +86,6 @@ struct GuideDetailView: View {
             }
         }
         .task { await viewModel.loadGuide(slug: slug) }
-    }
-}
-
-/// SwiftUI wrapper that renders HTML in a WKWebView with dynamic height
-struct DynamicHTMLView: View {
-    let html: String
-    @State private var contentHeight: CGFloat = 100
-
-    var body: some View {
-        HTMLWebView(html: html, contentHeight: $contentHeight)
-            .frame(height: contentHeight)
-    }
-}
-
-struct HTMLWebView: UIViewRepresentable {
-    let html: String
-    @Binding var contentHeight: CGFloat
-
-    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
-
-    func makeUIView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.isScrollEnabled = false
-        webView.scrollView.bounces = false
-        webView.navigationDelegate = context.coordinator
-        return webView
-    }
-
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        let styledHTML = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                font-size: 16px;
-                line-height: 1.6;
-                color: #1a1a1a;
-                padding: 0;
-                -webkit-text-size-adjust: 100%;
-            }
-            @media (prefers-color-scheme: dark) {
-                body { color: #e5e5e5; }
-                h2, h3 { color: #ffffff; }
-            }
-            h2 { font-size: 20px; font-weight: 700; margin: 24px 0 12px 0; }
-            h3 { font-size: 17px; font-weight: 600; margin: 20px 0 8px 0; }
-            p { margin: 8px 0; }
-            ul, ol { margin: 8px 0; padding-left: 24px; }
-            li { margin: 4px 0; }
-            img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; }
-        </style>
-        </head>
-        <body>\(html)</body>
-        </html>
-        """
-        webView.loadHTMLString(styledHTML, baseURL: nil)
-    }
-
-    class Coordinator: NSObject, WKNavigationDelegate {
-        let parent: HTMLWebView
-        init(parent: HTMLWebView) { self.parent = parent }
-
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                webView.evaluateJavaScript("document.body.scrollHeight") { [weak self] result, _ in
-                    if let height = result as? CGFloat, height > 0 {
-                        DispatchQueue.main.async {
-                            self?.parent.contentHeight = height
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

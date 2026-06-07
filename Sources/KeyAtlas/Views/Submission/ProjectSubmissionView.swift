@@ -95,6 +95,29 @@ private struct KeycapProfilesResponse: Codable, Sendable {
     let profiles: [String]
 }
 
+private let fallbackKeycapProfiles: [String] = [
+    "ASA",
+    "Cherry",
+    "DCS",
+    "DCX",
+    "DSA",
+    "DSS",
+    "KAM",
+    "KAP",
+    "KAT",
+    "MDA",
+    "MT3",
+    "MT4",
+    "MTNU",
+    "OEM",
+    "Other",
+    "PBS",
+    "PFF",
+    "SA",
+    "WDA",
+    "XDA",
+]
+
 // MARK: - Submission View
 
 struct ProjectSubmissionView: View {
@@ -159,7 +182,13 @@ struct ProjectSubmissionView: View {
     @State private var userProjects: [Project] = []
     @State private var isLoadingUserProjects = false
 
-    private let sections = ["Import", "Basic Info", "Details", "Media", "Vendors", "Pricing & Dates", "Sound Tests"]
+    private var sections: [String] {
+        var items = ["Import", "Basic Info", "Details", "Media", "Vendors", "Pricing & Dates", "Tags", "Links", "Sound Tests"]
+        if isAdminEditing {
+            items.append("Settings")
+        }
+        return items
+    }
 
     private var isEditingExistingProject: Bool {
         projectToEdit != nil
@@ -252,7 +281,13 @@ struct ProjectSubmissionView: View {
                     mediaSection.tag(3)
                     vendorsSection.tag(4)
                     pricingSection.tag(5)
-                    soundTestsSection.tag(6)
+                    tagsSection.tag(6)
+                    linksSection.tag(7)
+                    soundTestsSection.tag(8)
+
+                    if isAdminEditing {
+                        settingsSection.tag(9)
+                    }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -499,7 +534,11 @@ struct ProjectSubmissionView: View {
                 TextField("e.g. Q3 2026", text: $estimatedDelivery)
                     .accessibilityLabel("Estimated delivery")
             }
+        }
+    }
 
+    private var tagsSection: some View {
+        Form {
             Section("Tags") {
                 HStack {
                     TextField("Add tag", text: $newTag)
@@ -542,7 +581,11 @@ struct ProjectSubmissionView: View {
                     }
                 }
             }
+        }
+    }
 
+    private var linksSection: some View {
+        Form {
             Section("Links") {
                 if links.isEmpty {
                     Text("No links added yet.")
@@ -573,12 +616,14 @@ struct ProjectSubmissionView: View {
                 }
                 .accessibilityLabel("Add project link")
             }
+        }
+    }
 
-            if isAdminEditing {
-                Section("Project Settings") {
+    private var settingsSection: some View {
+        Form {
+            Section("Project Settings") {
                     Toggle("Published", isOn: $isPublished)
                     Toggle("Featured", isOn: $isFeatured)
-                }
             }
         }
     }
@@ -921,14 +966,24 @@ struct ProjectSubmissionView: View {
     }
 
     private func loadProfiles() async {
+        var mergedProfiles = fallbackKeycapProfiles
+
         do {
             let response: KeycapProfilesResponse = try await APIClient.shared.request(
                 path: "/api/keycap-profiles"
             )
-            profiles = response.profiles
+            for profile in response.profiles where !mergedProfiles.contains(profile) {
+                mergedProfiles.append(profile)
+            }
         } catch {
-            // Non-critical, silently fail
+            // Fall back to the local canonical list when the API lags or fails.
         }
+
+        if !profile.isEmpty && !mergedProfiles.contains(profile) {
+            mergedProfiles.append(profile)
+        }
+
+        profiles = mergedProfiles
     }
 
     private func loadVendors() async {
@@ -960,12 +1015,14 @@ struct ProjectSubmissionView: View {
 
             var fieldsPrefilled = 0
 
-            // Only prefill empty fields
+            // Keep title conservative, but replace the description with the
+            // imported source content so Geekhack imports behave like the web
+            // editor instead of silently preserving stale placeholder text.
             if title.isEmpty, let t = result.title, !t.isEmpty {
                 title = t
                 fieldsPrefilled += 1
             }
-            if description.isEmpty, let d = result.description, !d.isEmpty {
+            if let d = result.description, !d.isEmpty, d != description {
                 description = d
                 fieldsPrefilled += 1
             }

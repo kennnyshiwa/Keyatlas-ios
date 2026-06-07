@@ -152,6 +152,25 @@
       text-decoration: underline;
     }
 
+    #editor details {
+      margin: 0.8em 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    #editor summary {
+      cursor: pointer;
+      padding: 10px 12px;
+      font-weight: 600;
+      list-style-position: inside;
+    }
+
+    #editor details > :not(summary) {
+      padding: 0 12px 12px;
+    }
+
     #editor code {
       font-family: "Menlo", "Monaco", monospace;
       font-size: 0.88em;
@@ -261,6 +280,7 @@
   <div class="toolbar-group">
     <button class="toolbar-btn" id="btn-quote"     title="Blockquote"    onmousedown="handleBlockquote(event)">❝</button>
     <button class="toolbar-btn" id="btn-link"      title="Insert Link"   onmousedown="openLinkDialog(event)">🔗</button>
+    <button class="toolbar-btn" id="btn-details"   title="Collapsible Section" onmousedown="insertCollapsibleSection(event)">▾</button>
   </div>
   <div class="toolbar-sep"></div>
   <div class="toolbar-group">
@@ -373,6 +393,19 @@
     reportContent();
   };
 
+  window.insertCollapsibleSection = function (e) {
+    e.preventDefault();
+    editor.focus();
+    var label = window.prompt('Collapsible section label', 'Hidden section');
+    if (!label) return;
+    label = label.trim();
+    if (!label) return;
+
+    var html = '<details data-collapsible="true"><summary>' + escHtml(label) + '</summary><div data-collapsible-content="true"><p><br></p></div></details><p><br></p>';
+    document.execCommand('insertHTML', false, html);
+    reportContent();
+  };
+
   // ── Link dialog ────────────────────────────────────────────
 
   var savedRange = null;
@@ -457,13 +490,15 @@
     'H1','H2','H3','H4','H5','H6',
     'UL','OL','LI',
     'BLOCKQUOTE','PRE','CODE',
-    'A','IMG',
+    'A','IMG','DETAILS','SUMMARY','DIV',
     'TABLE','THEAD','TBODY','TR','TH','TD'
   ]);
 
   var KEEP_ATTRS = {
     'A':   ['href','target'],
     'IMG': ['src','alt','width','height'],
+    'DETAILS': ['open','data-collapsible'],
+    'DIV': ['data-collapsible-content'],
   };
 
   function cleanNode(node) {
