@@ -88,7 +88,7 @@ actor APIClient {
             throw APIError.rateLimited
         default:
             if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data) {
-                throw APIError.server(errorResponse.message ?? "Server error")
+                throw APIError.server(errorResponse.message ?? errorResponse.error ?? "HTTP \(httpResponse.statusCode)")
             }
             throw APIError.server("HTTP \(httpResponse.statusCode)")
         }

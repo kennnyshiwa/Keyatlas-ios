@@ -18,6 +18,7 @@ private struct ProjectDraft: Codable {
     var gbStartDate: Date
     var gbEndDate: Date
     var showDatePickers: Bool
+    var importedImages: [URLImportResponse.ImportedImage]?
 }
 
 private struct EditableProjectLink: Identifiable, Hashable {
@@ -56,16 +57,27 @@ private struct URLImportResponse: Codable, Sendable {
     let gbEndDate: String?
     let links: [ImportedLink]?
     let tags: [String]?
+    let images: [ImportedImage]?
+    let category: String?
+
+    struct ImportedImage: Codable, Hashable, Sendable {
+        let url: String
+        let alt: String?
+    }
 
     enum CodingKeys: String, CodingKey {
-        case title, description, status, links, tags
-        case gbStartDate = "gb_start_date"
-        case gbEndDate = "gb_end_date"
+        case title, description, status, links, tags, images, category
+        case gbStartDate, gbEndDate
     }
 
     struct ImportedLink: Codable, Sendable {
         let title: String?
         let url: String?
+
+        enum CodingKeys: String, CodingKey {
+            case title = "label"
+            case url
+        }
     }
 }
 
@@ -149,6 +161,7 @@ struct ProjectSubmissionView: View {
     @State private var heroImageData: Data?
     @State private var galleryPhotos: [PhotosPickerItem] = []
     @State private var galleryData: [Data] = []
+    @State private var importedImages: [URLImportResponse.ImportedImage] = []
 
     @State private var categories: [ProjectCategory] = []
     @State private var availableVendors: [Vendor] = []
@@ -640,7 +653,7 @@ struct ProjectSubmissionView: View {
                         .frame(height: 150)
                         .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 8))
-                } else if let existingHero = projectToEdit?.heroImageUrl, !existingHero.isEmpty {
+                } else if let existingHero = importedImages.first?.url ?? projectToEdit?.heroImageUrl, !existingHero.isEmpty {
                     CachedImage(url: existingHero, contentMode: .fill)
                         .frame(height: 150)
                         .clipped()
@@ -654,6 +667,21 @@ struct ProjectSubmissionView: View {
             }
 
             Section("Gallery") {
+                if !importedImages.isEmpty {
+                    Text("Imported Images (\(importedImages.count))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
+                            ForEach(importedImages, id: \.url) { item in
+                                CachedImage(url: item.url, contentMode: .fill)
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                        }
+                    }
+                }
+
                 if let existingGallery = projectToEdit?.gallery, !existingGallery.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Current Gallery")
@@ -1014,6 +1042,15 @@ struct ProjectSubmissionView: View {
             )
 
             var fieldsPrefilled = 0
+            var seenImageURLs = Set<String>()
+            importedImages = (result.images ?? []).filter { image in
+                guard let url = URL(string: image.url),
+                      ["https", "http"].contains(url.scheme?.lowercased() ?? ""),
+                      url.host != nil else { return false }
+                return seenImageURLs.insert(image.url).inserted
+            }
+            if let importedCategory = result.category { categoryId = importedCategory }
+
 
             // Keep title conservative, but replace the description with the
             // imported source content so Geekhack imports behave like the web
@@ -1128,11 +1165,11 @@ struct ProjectSubmissionView: View {
         error = nil
 
         // Upload hero image first
-        var heroUrl: String?
+        var heroUrl: String? = importedImages.first?.url
         if let heroData = heroImageData {
             do {
                 let upload = try await APIClient.shared.upload(
-                    path: "/api/v1/upload",
+                    path: "/api/upload",
                     imageData: heroData,
                     filename: "hero.jpg"
                 )
@@ -1141,6 +1178,29 @@ struct ProjectSubmissionView: View {
                 self.error = "Hero image upload failed"
                 return
             }
+        }
+
+        var submissionImages = (projectToEdit?.gallery ?? []).map {
+            URLImportResponse.ImportedImage(url: $0.url, alt: $0.caption)
+        }
+        var knownImageURLs = Set(submissionImages.map(\.url))
+        for image in importedImages where knownImageURLs.insert(image.url).inserted {
+            submissionImages.append(image)
+        }
+        do {
+            for data in galleryData {
+                let upload = try await APIClient.shared.upload(
+                    path: "/api/upload", imageData: data,
+                    filename: "gallery-\(UUID().uuidString).jpg"
+                )
+                guard let url = upload.url, !url.isEmpty else { throw APIError.uploadFailed }
+                if knownImageURLs.insert(url).inserted {
+                    submissionImages.append(URLImportResponse.ImportedImage(url: url, alt: nil))
+                }
+            }
+        } catch {
+            self.error = "Gallery image upload failed. Your project has not been submitted."
+            return
         }
 
         // Build submission body
@@ -1170,6 +1230,7 @@ struct ProjectSubmissionView: View {
             let status: String
             let category: String?
             let heroImage: String?
+            let images: [URLImportResponse.ImportedImage]
             let profile: String?
             let estimatedDelivery: String?
             let priceMin: Int?
@@ -1191,6 +1252,7 @@ struct ProjectSubmissionView: View {
             let status: String
             let categoryId: String?
             let heroImageUrl: String?
+            let images: [URLImportResponse.ImportedImage]?
             let profile: String?
             let estimatedDelivery: String?
             let minPrice: Int?
@@ -1205,7 +1267,7 @@ struct ProjectSubmissionView: View {
 
             enum CodingKeys: String, CodingKey {
                 case title, description, status, profile
-                case tags, links, featured, published
+                case tags, links, featured, published, images
                 case categoryId = "category_id"
                 case heroImageUrl = "hero_image_url"
                 case estimatedDelivery = "estimated_delivery"
@@ -1259,6 +1321,7 @@ struct ProjectSubmissionView: View {
                     status: status.rawValue,
                     categoryId: categoryId.isEmpty ? nil : categoryId,
                     heroImageUrl: heroUrl,
+                    images: importedImages.isEmpty && galleryData.isEmpty ? nil : submissionImages,
                     profile: profile.isEmpty ? nil : profile,
                     estimatedDelivery: estimatedDelivery.isEmpty ? nil : estimatedDelivery,
                     minPrice: minPrice.isEmpty ? nil : Int((Double(minPrice) ?? 0) * 100),
@@ -1281,6 +1344,7 @@ struct ProjectSubmissionView: View {
                     status: status.rawValue,
                     category: categoryId.isEmpty ? nil : categoryId,
                     heroImage: heroUrl,
+                    images: submissionImages,
                     profile: profile.isEmpty ? nil : profile,
                     estimatedDelivery: estimatedDelivery.isEmpty ? nil : estimatedDelivery,
                     priceMin: Int((Double(minPrice) ?? 0) * 100),
@@ -1302,15 +1366,6 @@ struct ProjectSubmissionView: View {
                 )
                 try await APIClient.shared.requestVoid(.post, path: "/api/projects", body: createBody)
                 targetSlug = slug
-            }
-
-            // Upload any newly selected gallery images (works for create + edit)
-            for data in galleryData {
-                _ = try? await APIClient.shared.upload(
-                    path: "/api/v1/projects/\(targetSlug)/gallery",
-                    imageData: data,
-                    filename: "gallery-\(UUID().uuidString).jpg"
-                )
             }
 
             // Sync sound tests for editing flow (create already includes them in the body)
@@ -1463,7 +1518,8 @@ struct ProjectSubmissionView: View {
             maxPrice: maxPrice,
             gbStartDate: gbStartDate,
             gbEndDate: gbEndDate,
-            showDatePickers: showDatePickers
+            showDatePickers: showDatePickers,
+            importedImages: importedImages
         )
         if let data = try? JSONEncoder().encode(draft) {
             UserDefaults.standard.set(data, forKey: draftKey)
@@ -1493,6 +1549,7 @@ struct ProjectSubmissionView: View {
         gbStartDate = draft.gbStartDate
         gbEndDate = draft.gbEndDate
         showDatePickers = draft.showDatePickers
+        importedImages = draft.importedImages ?? []
     }
 
     private func discardUnsavedChanges() {
