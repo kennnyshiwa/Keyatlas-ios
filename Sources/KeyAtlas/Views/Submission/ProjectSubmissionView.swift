@@ -63,6 +63,7 @@ private struct URLImportResponse: Codable, Sendable {
     struct ImportedImage: Codable, Hashable, Sendable {
         let url: String
         let alt: String?
+        var order: Int? = nil
     }
 
     enum CodingKeys: String, CodingKey {
@@ -1202,6 +1203,8 @@ struct ProjectSubmissionView: View {
             self.error = "Gallery image upload failed. Your project has not been submitted."
             return
         }
+
+        for index in submissionImages.indices { submissionImages[index].order = index }
 
         // Build submission body
         struct VendorSubmitEntry: Codable, Hashable, Sendable {
