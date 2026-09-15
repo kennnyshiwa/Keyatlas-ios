@@ -11,14 +11,19 @@ final class ProfileViewModel: @unchecked Sendable {
     var unreadNotificationCount: Int = 0
     var isMarkingAllRead = false
 
-    private let api = APIClient.shared
+    private let api: APIClient
+
+    init(api: APIClient = .shared) {
+        self.api = api
+    }
 
     func loadProfile(username: String) async {
         await MainActor.run { self.isLoading = true; self.error = nil }
         defer { Task { @MainActor in self.isLoading = false } }
 
         do {
-            let profile: UserProfile = try await api.request(path: "/api/v1/users/\(username)")
+            // Public profiles remain anonymous when no credentials are available.
+            let profile: UserProfile = try await api.request(path: "/api/v1/users/\(username)", authenticated: true)
             await MainActor.run { self.profile = profile }
         } catch {
             await MainActor.run { self.error = error.localizedDescription }

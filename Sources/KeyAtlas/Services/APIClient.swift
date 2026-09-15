@@ -8,14 +8,15 @@ actor APIClient {
     private let session: URLSession
     private let decoder: JSONDecoder
 
-    private init() {
+    // A supplied session supports isolated request-contract tests; production uses the default configuration.
+    init(session: URLSession? = nil) {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.httpAdditionalHeaders = [
             "Accept": "application/json",
             "Content-Type": "application/json",
         ]
-        session = URLSession(configuration: config)
+        self.session = session ?? URLSession(configuration: config)
 
         decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
