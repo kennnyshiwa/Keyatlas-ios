@@ -1,0 +1,33 @@
+name: DiscoveryContract
+options:
+  deploymentTarget:
+    iOS: '17.0'
+settings:
+  SWIFT_VERSION: '6.0'
+  SWIFT_STRICT_CONCURRENCY: complete
+  GENERATE_INFOPLIST_FILE: YES
+  CODE_SIGNING_ALLOWED: NO
+  ENABLE_TESTABILITY: YES
+targets:
+  DiscoveryContract:
+    type: framework
+    platform: iOS
+    sources: [Sources]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: io.keyatlas.contract.framework
+  DiscoveryContractTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: DiscoveryContract
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: io.keyatlas.contract.tests
+schemes:
+  DiscoveryContract:
+    build:
+      targets:
+        DiscoveryContract: all
+        DiscoveryContractTests: [test]
+    test:
+      targets: [DiscoveryContractTests]

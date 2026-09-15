@@ -26,70 +26,105 @@ enum ProjectSortOption: String, CaseIterable, Sendable {
     }
 }
 
+@MainActor
 @Observable
 final class ProjectListViewModel: @unchecked Sendable {
-    var projects: [Project] = []
+    private var loadedProjects: [Project] = []
+    private var loadedUserID: String?
+    private var loadedSessionID: UUID?
+    private var generation = 0
+    var projects: [Project] {
+        loadedSessionID == SessionLifetime.shared.id && loadedUserID == currentUserID() ? loadedProjects : []
+    }
     var isLoading = false
     var isLoadingMore = false
-    var error: String?
+    private var loadedError: String?
+    var error: String? {
+        loadedSessionID == SessionLifetime.shared.id && loadedUserID == currentUserID() ? loadedError : nil
+    }
     var hasMore = true
     var sortOption: ProjectSortOption = .newest
     var statusFilter: ProjectStatus?
 
     private var currentPage = 1
     private let pageSize = 20
-    private let api = APIClient.shared
+    private let api: APIClient
+    private let currentUserID: @MainActor () -> String?
+
+    init(api: APIClient = .shared, currentUserID: @escaping @MainActor () -> String? = { AuthService.shared.currentUser?.id }) {
+        self.api = api
+        self.currentUserID = currentUserID
+    }
+
+    var followedProjects: [Project] {
+        projects.filter { $0.isFollowing == true }
+    }
+
+    var recommendationLabel: String {
+        if let first = followedProjects.first {
+            return "Because you follow \(first.title)"
+        }
+        return "From projects you follow"
+    }
+
+    var recommendedProjects: [Project] {
+        let followedIDs = Set(followedProjects.map(\.id))
+        let followedCategories = Set(followedProjects.compactMap(\.categoryId))
+
+        return projects
+            .filter { !followedIDs.contains($0.id) }
+            .filter { project in
+                guard let category = project.categoryId else { return false }
+                return followedCategories.contains(category)
+            }
+            .prefix(8)
+            .map { $0 }
+    }
+
+    var trendingProjects: [Project] {
+        Array(projects.sorted { $0.trendingScore > $1.trendingScore }.prefix(8))
+    }
 
     func loadProjects(refresh: Bool = false) async {
-        if refresh {
+        let sessionID = SessionLifetime.shared.id
+        let userID = currentUserID()
+        let accountChanged = loadedUserID != userID || loadedSessionID != sessionID
+        let reset = refresh || accountChanged
+        guard reset || (!isLoading && !isLoadingMore) else { return }
+        generation += 1
+        let requestGeneration = generation
+        if reset {
             currentPage = 1
             hasMore = true
-        }
-
-        guard !isLoading else { return }
-
-        if refresh {
-            await MainActor.run { self.isLoading = true; self.error = nil }
+            if accountChanged { loadedProjects = [] }
+            loadedUserID = userID
+            loadedSessionID = sessionID
+            isLoading = true
+            isLoadingMore = false
+            loadedError = nil
         } else {
-            await MainActor.run { self.isLoadingMore = true }
+            isLoadingMore = true
         }
-
         defer {
-            Task { @MainActor in
-                self.isLoading = false
-                self.isLoadingMore = false
+            if generation == requestGeneration {
+                isLoading = false
+                isLoadingMore = false
             }
         }
-
         do {
-            var query: [String: String] = [
-                "page": "\(currentPage)",
-                "page_size": "\(pageSize)",
-                "sort": sortOption.rawValue,
-            ]
-            if let status = statusFilter {
-                query["status"] = status.rawValue
-            }
-
+            var query = ["page": "\(currentPage)", "page_size": "\(pageSize)", "sort": sortOption.rawValue]
+            if let status = statusFilter { query["status"] = status.rawValue }
             let response: PaginatedResponse<Project> = try await api.request(
-                path: "/api/v1/projects",
-                query: query,
-                authenticated: true
+                path: "/api/v1/projects", query: query, authenticated: userID != nil
             )
-
-            await MainActor.run {
-                if refresh {
-                    self.projects = response.data
-                } else {
-                    self.projects.append(contentsOf: response.data)
-                }
-                self.hasMore = response.hasMore ?? (response.data.count >= self.pageSize)
-                self.currentPage += 1
-            }
+            guard generation == requestGeneration, SessionLifetime.shared.id == sessionID, currentUserID() == userID, !Task.isCancelled else { return }
+            if reset { loadedProjects = response.data }
+            else { loadedProjects.append(contentsOf: response.data) }
+            hasMore = response.hasMore ?? (response.data.count >= pageSize)
+            currentPage += 1
         } catch {
-            await MainActor.run {
-                self.error = error.localizedDescription
-            }
+            guard generation == requestGeneration, SessionLifetime.shared.id == sessionID, currentUserID() == userID else { return }
+            self.loadedError = error.localizedDescription
         }
     }
 

@@ -5,35 +5,6 @@ struct ProjectListView: View {
     @State private var viewModel = ProjectListViewModel()
     @State private var showSortPicker = false
 
-    private var followedProjects: [Project] {
-        viewModel.projects.filter { $0.isFollowing == true }
-    }
-
-    private var recommendationLabel: String {
-        if let first = followedProjects.first {
-            return "Because you follow \(first.title)"
-        }
-        return "From projects you follow"
-    }
-
-    private var recommendedProjects: [Project] {
-        let followedIDs = Set(followedProjects.map(\.id))
-        let followedCategories = Set(followedProjects.compactMap(\.categoryId))
-
-        return viewModel.projects
-            .filter { !followedIDs.contains($0.id) }
-            .filter { project in
-                guard let category = project.categoryId else { return false }
-                return followedCategories.contains(category)
-            }
-            .prefix(8)
-            .map { $0 }
-    }
-
-    private var trendingProjects: [Project] {
-        Array(viewModel.projects.sorted { $0.trendingScore > $1.trendingScore }.prefix(8))
-    }
-
     var body: some View {
         NavigationStack {
             Group {
@@ -79,7 +50,7 @@ struct ProjectListView: View {
                     }
                 }
             }
-            .task { await viewModel.loadProjects(refresh: true) }
+            .task(id: [SessionLifetime.shared.id.uuidString, AuthService.shared.currentUser?.id ?? ""]) { await viewModel.loadProjects(refresh: true) }
         }
     }
 
@@ -104,16 +75,16 @@ struct ProjectListView: View {
     }
 
     private var projectList: some View {
-        let hasHighlightLanes = !recommendedProjects.isEmpty || !trendingProjects.isEmpty
+        let hasHighlightLanes = !viewModel.recommendedProjects.isEmpty || !viewModel.trendingProjects.isEmpty
 
         return ScrollView {
             LazyVStack(spacing: 16) {
-                if !recommendedProjects.isEmpty {
-                    laneSection(title: recommendationLabel, projects: recommendedProjects)
+                if !viewModel.recommendedProjects.isEmpty {
+                    laneSection(title: viewModel.recommendationLabel, projects: viewModel.recommendedProjects)
                 }
 
-                if !trendingProjects.isEmpty {
-                    laneSection(title: "Trending this week", projects: trendingProjects)
+                if !viewModel.trendingProjects.isEmpty {
+                    laneSection(title: "Trending this week", projects: viewModel.trendingProjects)
                 }
 
                 if hasHighlightLanes {

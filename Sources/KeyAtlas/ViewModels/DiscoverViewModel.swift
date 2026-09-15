@@ -1,143 +1,170 @@
 import Foundation
 
+@MainActor
 @Observable
 final class DiscoverViewModel: @unchecked Sendable {
     var interestChecks: [Project] = []
     var groupBuys: [Project] = []
     var endingSoon: [Project] = []
     var newThisWeek: [Project] = []
-    var recommendations: [Project] = []
-    var recommendationLabel = "From projects you follow"
+    private var personalProjects: [Project] = []
+    private var personalUserID: String?
+    private var personalSessionID: UUID?
+    private var personalGeneration = 0
+    var recommendations: [Project] {
+        personalSessionID == SessionLifetime.shared.id && personalUserID == currentUserID() && personalUserID != nil ? personalProjects : []
+    }
+    private var personalLabel = "From projects you follow"
+    var recommendationLabel: String {
+        personalSessionID == SessionLifetime.shared.id && personalUserID == currentUserID() && personalUserID != nil
+            ? personalLabel : "From projects you follow"
+    }
     var trendingThisWeek: [Project] = []
-    var isLoading = false
-    var error: String?
+    private struct Load: Equatable, Sendable {
+        let generation: Int
+        let sessionID: UUID
+        let userID: String?
+    }
+    private var loadGeneration = 0
+    private var activeLoad: Load?
+    private var loading = false
+    // Visible state belongs to this load even before a new view task runs.
+    private var loadedError: String?
+    var isLoading: Bool {
+        activeLoad.map { owns($0) } == true && loading
+    }
+    var error: String? {
+        activeLoad.map { owns($0) } == true ? loadedError : nil
+    }
 
-    private let api = APIClient.shared
+    private func owns(_ load: Load) -> Bool {
+        activeLoad == load && SessionLifetime.shared.id == load.sessionID && currentUserID() == load.userID
+    }
+
+    private let api: APIClient
+    private let currentUserID: @MainActor () -> String?
+
+    init(api: APIClient = .shared, currentUserID: @escaping @MainActor () -> String? = { AuthService.shared.currentUser?.id }) {
+        self.api = api
+        self.currentUserID = currentUserID
+    }
 
     func loadAll() async {
-        await MainActor.run { self.isLoading = true; self.error = nil }
-        defer { Task { @MainActor in self.isLoading = false } }
+        loadGeneration += 1
+        let load = Load(generation: loadGeneration, sessionID: SessionLifetime.shared.id, userID: currentUserID())
+        activeLoad = load
+        loading = true
+        loadedError = nil
+        // Synchronous, owned completion: an older load cannot stop a newer spinner.
+        defer { if activeLoad == load { loading = false } }
 
         await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.loadInterestChecks() }
-            group.addTask { await self.loadGroupBuys() }
-            group.addTask { await self.loadEndingSoon() }
-            group.addTask { await self.loadNewThisWeek() }
-            group.addTask { await self.loadPersonalizedLanes() }
-            group.addTask { await self.loadTrendingThisWeek() }
+            group.addTask { await self.loadInterestChecks(load) }
+            group.addTask { await self.loadGroupBuys(load) }
+            group.addTask { await self.loadEndingSoon(load) }
+            group.addTask { await self.loadNewThisWeek(load) }
+            group.addTask { await self.loadPersonalizedLanes(load) }
+            group.addTask { await self.loadTrendingThisWeek(load) }
         }
     }
 
-    private func loadInterestChecks() async {
+    private func loadInterestChecks(_ load: Load) async {
+        guard owns(load), !Task.isCancelled else { return }
         do {
             let response: PaginatedResponse<Project> = try await api.request(
                 path: "/api/v1/projects",
-                query: ["status": "INTEREST_CHECK", "sort": "newest", "page_size": "20"]
+                query: ["status": "INTEREST_CHECK", "sort": "newest", "page_size": "20"], expectedSessionID: load.sessionID
             )
-            await MainActor.run { self.interestChecks = response.data }
+            guard owns(load), !Task.isCancelled else { return }
+            interestChecks = response.data
         } catch {
-            await MainActor.run { self.error = error.localizedDescription }
+            guard owns(load), !Task.isCancelled else { return }
+            loadedError = error.localizedDescription
         }
     }
 
-    private func loadGroupBuys() async {
+    private func loadGroupBuys(_ load: Load) async {
+        guard owns(load), !Task.isCancelled else { return }
         do {
             let response: PaginatedResponse<Project> = try await api.request(
                 path: "/api/v1/projects",
-                query: ["status": "GROUP_BUY", "sort": "newest", "page_size": "20"]
+                query: ["status": "GROUP_BUY", "sort": "newest", "page_size": "20"], expectedSessionID: load.sessionID
             )
-            await MainActor.run { self.groupBuys = response.data }
+            guard owns(load), !Task.isCancelled else { return }
+            groupBuys = response.data
         } catch {
-            await MainActor.run { self.error = error.localizedDescription }
+            guard owns(load), !Task.isCancelled else { return }
+            loadedError = error.localizedDescription
         }
     }
 
-    private func loadEndingSoon() async {
+    private func loadEndingSoon(_ load: Load) async {
+        guard owns(load), !Task.isCancelled else { return }
         do {
             // Match web logic exactly: GROUP_BUY projects with gbEndDate in next 7 days, sorted ascending by gbEndDate
             let response: PaginatedResponse<Project> = try await api.request(
                 path: "/api/v1/discover/ending-soon",
-                query: ["page_size": "10"]
+                query: ["page_size": "10"], expectedSessionID: load.sessionID
             )
-            await MainActor.run { self.endingSoon = response.data }
+            guard owns(load), !Task.isCancelled else { return }
+            endingSoon = response.data
         } catch {
             // Silently fail — ending soon is supplementary
         }
     }
 
-    private func loadNewThisWeek() async {
+    private func loadNewThisWeek(_ load: Load) async {
+        guard owns(load), !Task.isCancelled else { return }
         do {
             let response: PaginatedResponse<Project> = try await api.request(
                 path: "/api/v1/projects/latest",
-                query: ["page_size": "10"]
+                query: ["page_size": "10"], expectedSessionID: load.sessionID
             )
-            await MainActor.run { self.newThisWeek = response.data }
+            guard owns(load), !Task.isCancelled else { return }
+            newThisWeek = response.data
         } catch {
             // Silently fail
         }
     }
 
-    private func loadPersonalizedLanes() async {
+    private func loadPersonalizedLanes(_ load: Load) async {
+        guard owns(load), !Task.isCancelled else { return }
+        await loadPersonalizedLanes()
+    }
+
+    func loadPersonalizedLanes() async {
+        personalGeneration += 1
+        let generation = personalGeneration
+        let sessionID = SessionLifetime.shared.id
+        personalSessionID = sessionID
+        let userID = currentUserID()
+        personalUserID = userID
+        personalProjects = []
+        personalLabel = "From projects you follow"
+        guard userID != nil else { return }
         do {
-            let response: PaginatedResponse<Project> = try await api.request(
-                path: "/api/v1/projects",
-                query: ["sort": "newest", "page_size": "60"],
-                authenticated: true
+            let response: RecommendedProjectsResponse = try await api.request(
+                path: "/api/v1/discover/recommended", authenticated: true
             )
-
-            let followed = response.data.filter { $0.isFollowing == true }
-            guard !followed.isEmpty else {
-                await MainActor.run { self.recommendations = [] }
-                return
-            }
-
-            let followedIDs = Set(followed.map(\.id))
-            let followedCategoryIDs = Set(followed.compactMap(\.categoryId))
-            let followedTags = Set(followed.flatMap { $0.tags ?? [] }.map { $0.lowercased() })
-
-            let ranked = response.data
-                .filter { !followedIDs.contains($0.id) }
-                .map { project in
-                    (project: project, score: recommendationScore(project: project, followedCategoryIDs: followedCategoryIDs, followedTags: followedTags))
-                }
-                .filter { $0.score > 0 }
-                .sorted { lhs, rhs in
-                    if lhs.score == rhs.score {
-                        return (lhs.project.updatedAt ?? "") > (rhs.project.updatedAt ?? "")
-                    }
-                    return lhs.score > rhs.score
-                }
-                .prefix(10)
-                .map(\.project)
-
-            let topFollow = followed.first?.title ?? ""
-            await MainActor.run {
-                self.recommendationLabel = topFollow.isEmpty ? "From projects you follow" : "Because you follow \(topFollow)"
-                self.recommendations = Array(ranked)
-            }
+            guard generation == personalGeneration, SessionLifetime.shared.id == sessionID, currentUserID() == userID, !Task.isCancelled else { return }
+            guard let title = response.anchorTitle else { return }
+            personalLabel = "Because you follow \(title)"
+            personalProjects = response.data
         } catch {
-            // Not signed in or no personalized data available
+            // Empty on auth failure, no-follow, or endpoint error; never retain
+            // old personal cards. A newer load owns its own results.
+            guard generation == personalGeneration, SessionLifetime.shared.id == sessionID, currentUserID() == userID else { return }
+            personalProjects = []
+            personalLabel = "From projects you follow"
         }
     }
 
-    private func recommendationScore(project: Project, followedCategoryIDs: Set<String>, followedTags: Set<String>) -> Int {
-        var score = 0
-        if let categoryId = project.categoryId, followedCategoryIDs.contains(categoryId) {
-            score += 5
-        }
-
-        let projectTags = Set((project.tags ?? []).map { $0.lowercased() })
-        score += followedTags.intersection(projectTags).count * 3
-        score += (project.followCount ?? 0) / 20
-        score += (project.favoriteCount ?? 0) / 20
-        return score
-    }
-
-    private func loadTrendingThisWeek() async {
+    private func loadTrendingThisWeek(_ load: Load) async {
+        guard owns(load), !Task.isCancelled else { return }
         do {
             let response: PaginatedResponse<Project> = try await api.request(
                 path: "/api/v1/projects",
-                query: ["sort": "updated", "page_size": "40"]
+                query: ["sort": "updated", "page_size": "40"], expectedSessionID: load.sessionID
             )
 
             let ranked = response.data
@@ -149,11 +176,20 @@ final class DiscoverViewModel: @unchecked Sendable {
                 }
                 .prefix(10)
 
-            await MainActor.run {
-                self.trendingThisWeek = Array(ranked)
-            }
+            guard owns(load), !Task.isCancelled else { return }
+            trendingThisWeek = Array(ranked)
         } catch {
             // Silently fail
         }
+    }
+}
+
+struct RecommendedProjectsResponse: Codable, Sendable {
+    let anchorTitle: String?
+    let data: [Project]
+
+    enum CodingKeys: String, CodingKey {
+        case anchorTitle = "anchor_title"
+        case data
     }
 }

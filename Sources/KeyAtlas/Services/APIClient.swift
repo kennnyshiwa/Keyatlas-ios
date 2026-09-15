@@ -1,5 +1,15 @@
 import Foundation
 
+/// Shared identity for the app's single Keychain-backed authentication lifetime.
+/// Kept alongside APIClient so every consumer (including source-only suites) uses it.
+@MainActor
+@Observable
+final class SessionLifetime {
+    static let shared = SessionLifetime()
+    private(set) var id = UUID()
+    func invalidate() { id = UUID() }
+}
+
 /// Central API client for all KeyAtlas REST calls
 actor APIClient {
     static let shared = APIClient()
@@ -8,10 +18,13 @@ actor APIClient {
     private let session: URLSession
     private let decoder: JSONDecoder
 
-    // A supplied session supports isolated request-contract tests; production uses the default configuration.
+    // A supplied session supports isolated request-contract tests. Credentials are
+    // explicit Keychain headers, never ambient URLSession cookies.
     init(session: URLSession? = nil) {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
+        config.httpCookieStorage = nil
+        config.httpShouldSetCookies = false
         config.httpAdditionalHeaders = [
             "Accept": "application/json",
             "Content-Type": "application/json",
@@ -35,7 +48,8 @@ actor APIClient {
         path: String,
         query: [String: String]? = nil,
         body: (any Encodable & Sendable)? = nil,
-        authenticated: Bool = false
+        authenticated: Bool = false,
+        expectedSessionID: UUID? = nil
     ) async throws -> T {
         var url = baseURL.appendingPathComponent(path)
 
@@ -47,13 +61,24 @@ actor APIClient {
 
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
+        request.httpShouldHandleCookies = false
+        let (sessionID, token, cookie) = try await MainActor.run {
+            let id = SessionLifetime.shared.id
+            if let expectedSessionID, expectedSessionID != id { throw APIError.unauthorized }
+            return (id, authenticated ? KeychainService.load(.authToken) : nil,
+                    authenticated ? KeychainService.load(.sessionCookie) : nil)
+        }
+        if authenticated || path == "/api/v1/projects" || path == "/api/v1/discover/recommended" {
+            request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+            request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
+        }
 
-        if authenticated, let token = authToken {
+        if let token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
         // Also send session cookie if available
-        if authenticated, let cookie = KeychainService.load(.sessionCookie) {
+        if let cookie {
             request.setValue(cookie, forHTTPHeaderField: "Cookie")
         }
 
@@ -68,9 +93,16 @@ actor APIClient {
             throw APIError.invalidResponse
         }
 
-        // Store set-cookie header for session-based auth
-        if let setCookie = httpResponse.value(forHTTPHeaderField: "Set-Cookie") {
-            try? KeychainService.save(setCookie, for: .sessionCookie)
+        // Check lifetime even for anonymous requests: logout/login may reuse the
+        // identical token. Check and cookie mutation must be one atomic actor turn.
+        try await MainActor.run {
+            guard SessionLifetime.shared.id == sessionID else { throw APIError.unauthorized }
+            if authenticated, token != KeychainService.load(.authToken) || cookie != KeychainService.load(.sessionCookie) {
+                throw APIError.unauthorized
+            }
+            if let setCookie = httpResponse.value(forHTTPHeaderField: "Set-Cookie") {
+                try? KeychainService.save(setCookie, for: .sessionCookie)
+            }
         }
 
         switch httpResponse.statusCode {
@@ -100,9 +132,10 @@ actor APIClient {
         _ method: HTTPMethod = .post,
         path: String,
         body: (any Encodable & Sendable)? = nil,
-        authenticated: Bool = true
+        authenticated: Bool = true,
+        expectedSessionID: UUID? = nil
     ) async throws {
-        let _: EmptyResponse = try await request(method, path: path, body: body, authenticated: authenticated)
+        let _: EmptyResponse = try await request(method, path: path, body: body, authenticated: authenticated, expectedSessionID: expectedSessionID)
     }
 
     // MARK: - Multipart upload

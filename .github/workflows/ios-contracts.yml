@@ -1,0 +1,78 @@
+name: iOS Contracts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-contracts:
+    name: Actual-source contracts and unsigned iOS
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      CANDIDATE_SHA: ${{ github.sha }}
+      EVIDENCE: ${{ runner.temp }}/ios-contract-evidence
+    steps:
+      - name: Checkout exact event SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Record and verify source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          mkdir -p "$EVIDENCE"
+          git rev-parse HEAD > "$EVIDENCE/source-sha.txt"
+          xcodebuild -version | tee "$EVIDENCE/xcode-version.txt"
+          swift --version | tee "$EVIDENCE/swift-version.txt"
+      - name: Actual-source Swift contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 Tests/DiscoveryContract/run.py "$EVIDENCE/DiscoveryContract" 2>&1 | tee "$EVIDENCE/discovery.log"
+          python3 Tests/ProfileRequestContract/run.py "$EVIDENCE/ProfileRequestContract" 2>&1 | tee "$EVIDENCE/profile.log"
+          python3 scripts/check-submission-contract.py 2>&1 | tee "$EVIDENCE/submission.log"
+      - name: Generic unsigned iOS build
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project KeyAtlas.xcodeproj -scheme KeyAtlas -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ios-build" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee "$EVIDENCE/ios-build.log"
+      - name: Available iOS simulator contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcrun simctl list devices available -j > "$EVIDENCE/simulators.json"
+          SIMULATOR_ID=$(python3 - "$EVIDENCE/simulators.json" <<'PYTHON'
+          import json, sys
+          devices = json.load(open(sys.argv[1]))["devices"]
+          iphones = [d["udid"] for runtime, rows in devices.items() if ".iOS-" in runtime
+                     for d in rows if d.get("isAvailable") and d["name"].startswith("iPhone")]
+          if not iphones:
+              raise SystemExit("No available iPhone simulator: contract gate cannot pass")
+          print(iphones[0])
+          PYTHON
+          )
+          for SUITE in DiscoveryContract ProfileRequestContract; do
+            xcodegen generate --spec "$EVIDENCE/$SUITE/project.yml"
+            xcodebuild -project "$EVIDENCE/$SUITE/$SUITE.xcodeproj" -scheme "$SUITE" -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -destination-timeout 120 -derivedDataPath "$RUNNER_TEMP/$SUITE-simulator" -resultBundlePath "$EVIDENCE/$SUITE.xcresult" CODE_SIGNING_ALLOWED=NO test 2>&1 | tee "$EVIDENCE/$SUITE-simulator.log"
+          done
+      - name: Upload identity and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-contracts-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/ios-contract-evidence/*.txt
+            ${{ runner.temp }}/ios-contract-evidence/*.log
+            ${{ runner.temp }}/ios-contract-evidence/*.json
+            ${{ runner.temp }}/ios-contract-evidence/*.xcresult
+            ${{ runner.temp }}/ios-contract-evidence/*/production-source-sha256.json
+          if-no-files-found: error

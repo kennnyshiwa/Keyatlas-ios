@@ -94,7 +94,7 @@ struct DiscoverView: View {
             .navigationDestination(for: Project.self) { project in
                 ProjectDetailView(slug: project.slug)
             }
-            .task { await viewModel.loadAll() }
+            .task(id: [SessionLifetime.shared.id.uuidString, AuthService.shared.currentUser?.id ?? ""]) { await viewModel.loadAll() }
         }
     }
 
