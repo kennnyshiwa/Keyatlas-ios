@@ -16,13 +16,15 @@ jobs:
     timeout-minutes: 45
     env:
       CANDIDATE_SHA: ${{ github.sha }}
-      EVIDENCE: ${{ runner.temp }}/ios-contract-evidence
     steps:
       - name: Checkout exact event SHA
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Set runner-local evidence path
+        shell: bash
+        run: echo "EVIDENCE=$RUNNER_TEMP/ios-contract-evidence" >> "$GITHUB_ENV"
       - name: Record and verify source identity
         shell: bash
         run: |
